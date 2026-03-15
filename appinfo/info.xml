@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<info>
+    <id>locshare</id>
+    <name>LocShare</name>
+    <summary>Live location sharing for family and friends</summary>
+    <description>Share your live location with family and friends directly within Nextcloud. No third-party services, no apps to install — just send a link.</description>
+    <version>0.1.0</version>
+    <licence>agpl</licence>
+    <author>Jannes Klee</author>
+    <namespace>LocShare</namespace>
+    <category>social</category>
+    <dependencies>
+        <nextcloud min-version="30" max-version="34"/>
+    </dependencies>
+    <navigations>
+        <navigation>
+            <id>locshare</id>
+            <name>LocShare</name>
+            <route>locshare.page.index</route>
+            <icon>app.svg</icon>
+            <order>5</order>
+        </navigation>
+    </navigations>
+</info>

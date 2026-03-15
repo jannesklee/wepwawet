@@ -1,0 +1,5 @@
+node_modules/
+vendor/
+js/
+.php*.cache
+CLAUDE.md

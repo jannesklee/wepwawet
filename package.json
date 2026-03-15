@@ -1,0 +1,23 @@
+{
+	"name": "locshare",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "vite build --watch --mode development",
+		"build": "vite build",
+		"lint": "eslint --ext .js,.vue src/",
+		"lint:fix": "eslint --fix --ext .js,.vue src/"
+	},
+	"dependencies": {
+		"@nextcloud/axios": "^2.5.1",
+		"@nextcloud/initial-state": "^2.2.0",
+		"@nextcloud/router": "^3.0.1",
+		"maplibre-gl": "^4.0.0",
+		"vue": "^3.4.0"
+	},
+	"devDependencies": {
+		"@nextcloud/eslint-config": "^8.4.1",
+		"@nextcloud/vite-config": "^2.2.0",
+		"eslint": "^8.57.0"
+	}
+}
