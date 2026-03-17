@@ -4,6 +4,8 @@
 
 <script>
 import maplibregl from 'maplibre-gl'
+import { loadState } from '@nextcloud/initial-state'
+import axios from '@nextcloud/axios'
 
 export default {
 	name: 'LocShareApp',
@@ -11,10 +13,12 @@ export default {
 	data() {
 		return {
 			map: null,
+			state: loadState('locshare', 'locshare-state'),
+			watchId: null,
 		}
 	},
 
-	async mounted() {
+	mounted() {
 		this.map = new maplibregl.Map({
 			container: 'ls-map-container',
 			style: {
@@ -32,9 +36,25 @@ export default {
 				layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
 			},
 		})
+
+		this.watchId = navigator.geolocation.watchPosition(
+			(pos) => {
+				axios.post(this.state.updateUrl, {
+					lat: pos.coords.latitude,
+					lon: pos.coords.longitude,
+					accuracy: pos.coords.accuracy ?? null,
+					altitude: pos.coords.altitude ?? null,
+					speed: pos.coords.speed ?? null,
+					bearing: pos.coords.heading ?? null,
+				}).catch((e) => console.error('Failed to update position', e))
+			},
+			(err) => console.warn('Geolocation error', err),
+			{ enableHighAccuracy: true },
+		)
 	},
 
 	beforeUnmount() {
+		if (this.watchId !== null) navigator.geolocation.clearWatch(this.watchId)
 		if (this.map) this.map.remove()
 	},
 }
