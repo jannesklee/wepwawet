@@ -153,7 +153,8 @@ export default {
 					const el = this.createMarkerEl(member)
 					this.markers[member.userId] = new maplibregl.Marker({ element: el })
 						.setLngLat([member.lon, member.lat])
-						.setPopup(new maplibregl.Popup({ offset: 28 }).setText(member.displayName))
+						.setPopup(new maplibregl.Popup({ offset: 28, maxWidth: 'none' })
+							.setHTML(this.buildPopupHtml(member)))
 						.addTo(this.map)
 				}
 			}
@@ -182,6 +183,23 @@ export default {
 			}
 
 			return el
+		},
+
+		buildPopupHtml(member) {
+			const avatar = member.avatarUrl
+				? `<img src="${member.avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" />`
+				: `<span style="width:32px;height:32px;border-radius:50%;background:#0082c9;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${member.displayName.charAt(0).toUpperCase()}</span>`
+			const updated = member.updatedAt
+				? new Date(member.updatedAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+				: null
+			return `<div style="display:flex;align-items:center;gap:10px;padding:4px 2px;font-family:sans-serif;">
+				${avatar}
+				<div style="display:flex;flex-direction:column;gap:2px;">
+					<span style="font-size:13px;font-weight:600;color:#222;white-space:nowrap;">${member.displayName}</span>
+					${updated ? `<span style="font-size:11px;color:#767676;">Updated ${updated}</span>` : ''}
+					${member.acc ? `<span style="font-size:11px;color:#767676;">±${Math.round(member.acc)} m</span>` : ''}
+				</div>
+			</div>`
 		},
 
 		fitBounds(members) {
@@ -314,6 +332,15 @@ export default {
 
 .ls-member-status--inactive {
 	background: var(--color-border-dark, #c8c8c8);
+}
+
+/* MapLibre popup reset — Nextcloud global styles can collapse the content */
+.maplibregl-popup-content {
+	padding: 10px 14px !important;
+	border-radius: 8px !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,.2) !important;
+	font-size: inherit !important;
+	line-height: inherit !important;
 }
 
 /* Map markers */
