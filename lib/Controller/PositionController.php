@@ -64,10 +64,11 @@ class PositionController extends Controller {
 	#[NoCSRFRequired]
 	public function guestUpdate(
 		string $token, string $name,
-		float $lat, float $lon,
+		?float $lat = null, ?float $lon = null,
 		?float $acc = null, ?float $alt = null,
 		?float $speed = null, ?float $bearing = null,
 		?int $duration = null,
+		bool $stop = false,
 	): DataResponse {
 		try {
 			$group = $this->groupMapper->findByToken($token);
@@ -75,9 +76,20 @@ class PositionController extends Controller {
 			return new DataResponse(['error' => 'not_found'], Http::STATUS_NOT_FOUND);
 		}
 
+		$cleanName = mb_substr(trim($name), 0, 64);
+
+		if ($stop) {
+			$this->guestMapper->deleteByGroupAndName($group->getId(), $cleanName);
+			return new DataResponse(['ok' => true]);
+		}
+
+		if ($lat === null || $lon === null) {
+			return new DataResponse(['error' => 'lat and lon required'], Http::STATUS_BAD_REQUEST);
+		}
+
 		$guest = new Guest();
 		$guest->setGroupId($group->getId());
-		$guest->setName(mb_substr(trim($name), 0, 64));
+		$guest->setName($cleanName);
 		$guest->setLat($lat);
 		$guest->setLon($lon);
 		$guest->setAcc($acc);

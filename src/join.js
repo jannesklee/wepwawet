@@ -52,6 +52,7 @@
 		var countdownTimer = null
 		var fakeCity = null
 		var fakeLat, fakeLon
+		var currentName = null
 
 		var style = getComputedStyle(document.documentElement)
 		var primaryColor = style.getPropertyValue('--color-primary').trim() || '#0082c9'
@@ -126,10 +127,17 @@
 			fakeMode = false
 			fakeCity = null
 			if (countdownTimer !== null) { clearInterval(countdownTimer); countdownTimer = null }
+			if (currentName) {
+				var params = new URLSearchParams({ name: currentName, stop: '1' })
+				fetch(GUEST_UPDATE_URL + '?' + params.toString(), { method: 'POST' })
+					.catch(function () { /* best-effort */ })
+				currentName = null
+			}
 			if (showStopped) showView(stoppedView)
 		}
 
 		function startSharingWithUrl(guestUpdateUrl, name, useFake) {
+			currentName = name
 			expiresAt = selectedMinutes > 0
 				? Math.floor(Date.now() / 1000) + selectedMinutes * 60
 				: null
