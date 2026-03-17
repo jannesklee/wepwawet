@@ -1,5 +1,7 @@
 node_modules/
 vendor/
 js/
+css/
 .php*.cache
 CLAUDE.md
+.claude/
