@@ -2,28 +2,65 @@
 	<NcContent app-name="locshare">
 		<NcAppNavigation>
 			<template #list>
+				<!-- Share location (Mode 2) -->
 				<div class="ls-nav-section">
-					<h3 class="ls-nav-heading">Invite link</h3>
-					<div class="ls-invite-box">
-						<input
-							ref="inviteInput"
-							class="ls-invite-input"
-							readonly
-							:value="state.inviteUrl"
-							@focus="$event.target.select()" />
-						<NcButton
-							type="tertiary"
-							:aria-label="copied ? 'Copied!' : 'Copy invite link'"
-							@click="copyInviteLink">
-							<template #icon>
-								<CheckIcon v-if="copied" :size="20" />
-								<ContentCopyIcon v-else :size="20" />
-							</template>
-						</NcButton>
+					<h3 class="ls-nav-heading">Share my location</h3>
+					<div class="ls-duration-row">
+						<button
+							v-for="opt in durationOptions"
+							:key="opt.minutes"
+							class="ls-dur-btn"
+							:class="{ 'ls-dur-btn--active': shareMinutes === opt.minutes }"
+							@click="shareMinutes = opt.minutes">
+							{{ opt.label }}
+						</button>
 					</div>
-					<p class="ls-invite-hint">Share this link to invite family or guests.</p>
+					<NcButton
+						type="primary"
+						:disabled="creatingShare"
+						style="width:100%;margin-top:8px;"
+						@click="createShare">
+						Create share link
+					</NcButton>
 				</div>
 
+				<!-- Active shares -->
+				<div v-if="shares.length" class="ls-nav-section">
+					<h3 class="ls-nav-heading">Active links</h3>
+					<ul class="ls-share-list">
+						<li v-for="share in shares" :key="share.id" class="ls-share-item">
+							<div class="ls-share-url-row">
+								<input
+									class="ls-invite-input"
+									readonly
+									:value="share.url"
+									@focus="$event.target.select()" />
+								<NcButton
+									type="tertiary"
+									:aria-label="copiedId === share.id ? 'Copied!' : 'Copy link'"
+									@click="copyShare(share)">
+									<template #icon>
+										<CheckIcon v-if="copiedId === share.id" :size="18" />
+										<ContentCopyIcon v-else :size="18" />
+									</template>
+								</NcButton>
+								<NcButton
+									type="tertiary"
+									aria-label="Revoke link"
+									@click="revokeShare(share.id)">
+									<template #icon>
+										<DeleteIcon :size="18" />
+									</template>
+								</NcButton>
+							</div>
+							<p class="ls-share-expiry">
+								{{ formatExpiry(share.expiresAt) }}
+							</p>
+						</li>
+					</ul>
+				</div>
+
+				<!-- Members -->
 				<div class="ls-nav-section">
 					<h3 class="ls-nav-heading">Members</h3>
 					<ul class="ls-member-list">
@@ -63,14 +100,16 @@
 import maplibregl from 'maplibre-gl'
 import { loadState } from '@nextcloud/initial-state'
 import axios from '@nextcloud/axios'
+import { generateUrl } from '@nextcloud/router'
 import { NcContent, NcAppNavigation, NcAppContent, NcButton } from '@nextcloud/vue'
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import ContentCopyIcon from 'vue-material-design-icons/ContentCopy.vue'
+import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 
 export default {
 	name: 'LocShareApp',
 
-	components: { NcContent, NcAppNavigation, NcAppContent, NcButton, CheckIcon, ContentCopyIcon },
+	components: { NcContent, NcAppNavigation, NcAppContent, NcButton, CheckIcon, ContentCopyIcon, DeleteIcon },
 
 	data() {
 		return {
@@ -80,7 +119,11 @@ export default {
 			pollInterval: null,
 			markers: {},
 			members: [],
-			copied: false,
+			// share management
+			shares: [],
+			shareMinutes: 60,
+			creatingShare: false,
+			copiedId: null,
 		}
 	},
 
@@ -119,6 +162,7 @@ export default {
 
 			this.fetchPositions()
 			this.pollInterval = setInterval(() => this.fetchPositions(), 15000)
+			this.fetchShares()
 		})
 	},
 
@@ -213,15 +257,67 @@ export default {
 			this.map.fitBounds(bounds, { padding: 60, maxZoom: 15 })
 		},
 
-		async copyInviteLink() {
+		async fetchShares() {
 			try {
-				await navigator.clipboard.writeText(this.state.inviteUrl)
-			} catch {
-				this.$refs.inviteInput.select()
-				document.execCommand('copy')
+				const { data } = await axios.get(generateUrl('/apps/locshare/shares'))
+				this.shares = data
+			} catch (e) {
+				console.error('Failed to fetch shares', e)
 			}
-			this.copied = true
-			setTimeout(() => { this.copied = false }, 2000)
+		},
+
+		async createShare() {
+			this.creatingShare = true
+			try {
+				const { data } = await axios.post(
+					generateUrl('/apps/locshare/share') + '?duration=' + this.shareMinutes,
+				)
+				this.shares.unshift(data)
+				this.copyShare(data)
+			} catch (e) {
+				console.error('Failed to create share', e)
+			} finally {
+				this.creatingShare = false
+			}
+		},
+
+		async revokeShare(id) {
+			try {
+				await axios.post(generateUrl('/apps/locshare/share/' + id + '/revoke'))
+				this.shares = this.shares.filter((s) => s.id !== id)
+			} catch (e) {
+				console.error('Failed to revoke share', e)
+			}
+		},
+
+		async copyShare(share) {
+			try {
+				await navigator.clipboard.writeText(share.url)
+			} catch {
+				// fallback: not needed for modern browsers
+			}
+			this.copiedId = share.id
+			setTimeout(() => { this.copiedId = null }, 2000)
+		},
+
+		formatExpiry(expiresAt) {
+			if (!expiresAt) return 'No expiry'
+			const diff = expiresAt - Math.floor(Date.now() / 1000)
+			if (diff <= 0) return 'Expired'
+			const h = Math.floor(diff / 3600)
+			const m = Math.floor((diff % 3600) / 60)
+			return h > 0 ? `Expires in ${h}h ${m}m` : `Expires in ${m + 1} min`
+		},
+	},
+
+	computed: {
+		durationOptions() {
+			return [
+				{ minutes: 15, label: '15 min' },
+				{ minutes: 60, label: '1 hr' },
+				{ minutes: 240, label: '4 hr' },
+				{ minutes: 0, label: '∞' },
+			]
 		},
 	},
 }
@@ -235,7 +331,7 @@ export default {
 	height: 100%;
 }
 
-/* Invite section */
+/* Sidebar sections */
 .ls-nav-section {
 	padding: 12px 16px;
 	border-bottom: 1px solid var(--color-border, #ededed);
@@ -250,10 +346,50 @@ export default {
 	margin: 0 0 8px;
 }
 
-.ls-invite-box {
+/* Duration picker */
+.ls-duration-row {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 6px;
+}
+
+.ls-dur-btn {
+	padding: 7px 2px;
+	font-size: 12px;
+	font-weight: 600;
+	border: 1px solid var(--color-border, #ddd);
+	border-radius: var(--border-radius, 3px);
+	background: var(--color-main-background, #fff);
+	color: var(--color-main-text, #222);
+	cursor: pointer;
+}
+
+.ls-dur-btn--active {
+	background: var(--color-primary, #0082c9);
+	color: var(--color-primary-text, #fff);
+	border-color: var(--color-primary, #0082c9);
+}
+
+/* Active share list */
+.ls-share-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.ls-share-item {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.ls-share-url-row {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: 2px;
 }
 
 .ls-invite-input {
@@ -270,10 +406,11 @@ export default {
 	white-space: nowrap;
 }
 
-.ls-invite-hint {
+.ls-share-expiry {
 	font-size: 11px;
 	color: var(--color-text-maxcontrast, #767676);
-	margin: 6px 0 0;
+	margin: 0;
+	padding-left: 2px;
 }
 
 /* Member list */

@@ -3,4 +3,5 @@ import { createAppConfig } from '@nextcloud/vite-config'
 export default createAppConfig({
 	main: 'src/main.js',
 	join: 'src/join.js',
+	viewer: 'src/viewer.js',
 })

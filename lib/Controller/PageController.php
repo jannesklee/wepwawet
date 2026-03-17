@@ -7,6 +7,7 @@ use OCA\LocShare\Db\Group;
 use OCA\LocShare\Db\GroupMapper;
 use OCA\LocShare\Db\GroupMember;
 use OCA\LocShare\Db\GroupMemberMapper;
+use OCA\LocShare\Db\ShareMapper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
@@ -30,6 +31,7 @@ class PageController extends Controller {
 		IRequest $request,
 		private GroupMapper $groupMapper,
 		private GroupMemberMapper $groupMemberMapper,
+		private ShareMapper $shareMapper,
 		private IInitialState $initialState,
 		private IURLGenerator $urlGenerator,
 		private IUserManager $userManager,
@@ -103,6 +105,46 @@ class PageController extends Controller {
 			'debug' => $this->config->getSystemValueBool('debug', false),
 		]);
 		$response->setHeaderTitle($this->l->t('Share your location'));
+		$response->setFooterVisible(false);
+		return $response;
+	}
+
+	#[PublicPage]
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function view(string $token): TemplateResponse {
+		try {
+			$share = $this->shareMapper->findByToken($token);
+		} catch (\OCP\AppFramework\Db\DoesNotExistException $e) {
+			$response = new TemplateResponse('', 'error', [
+				'errors' => [['error' => $this->l->t('Share link not found')]],
+			], TemplateResponse::RENDER_AS_ERROR);
+			$response->setStatus(Http::STATUS_NOT_FOUND);
+			return $response;
+		}
+
+		if ($share->getExpiresAt() !== null && $share->getExpiresAt() < time()) {
+			$response = new TemplateResponse('', 'error', [
+				'errors' => [['error' => $this->l->t('This share link has expired')]],
+			], TemplateResponse::RENDER_AS_ERROR);
+			$response->setStatus(Http::STATUS_GONE);
+			return $response;
+		}
+
+		$ownerUser = $this->userManager->get($share->getOwnerUserId());
+		$ownerDisplayName = $ownerUser !== null ? $ownerUser->getDisplayName() : $share->getOwnerUserId();
+
+		$state = [
+			'ownerDisplayName' => $ownerDisplayName,
+			'ownerAvatarUrl' => '/index.php/avatar/' . urlencode($share->getOwnerUserId()) . '/64',
+			'positionUrl' => $this->urlGenerator->linkToRoute('locshare.share.position', ['token' => $token]),
+			'expiresAt' => $share->getExpiresAt(),
+		];
+
+		$this->initialState->provideInitialState('locshare-viewer-state', $state);
+
+		$response = new PublicTemplateResponse(Application::APP_ID, 'viewer', []);
+		$response->setHeaderTitle($ownerDisplayName . ' — ' . $this->l->t('Live location'));
 		$response->setFooterVisible(false);
 		return $response;
 	}
