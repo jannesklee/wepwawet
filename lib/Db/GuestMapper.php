@@ -42,6 +42,14 @@ class GuestMapper extends QBMapper {
 		return $this->findEntity($qb);
 	}
 
+	public function deleteExpired(): int {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->isNotNull('expires_at'))
+			->andWhere($qb->expr()->lte('expires_at', $qb->createNamedParameter(time(), IQueryBuilder::PARAM_INT)));
+		return $qb->executeStatement();
+	}
+
 	public function upsert(Guest $guest): void {
 		try {
 			$existing = $this->findByGroupAndName($guest->getGroupId(), $guest->getName());

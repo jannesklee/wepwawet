@@ -2,6 +2,7 @@
 
 namespace OCA\LocShare\AppInfo;
 
+use OCA\LocShare\BackgroundJob\CleanupExpiredGuests;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -17,6 +18,7 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function register(IRegistrationContext $context): void {
+		$context->registerBackgroundJob(CleanupExpiredGuests::class);
 	}
 
 	public function boot(IBootContext $context): void {
