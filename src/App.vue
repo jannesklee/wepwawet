@@ -82,8 +82,8 @@
 							</span>
 							<span
 								class="ls-member-status"
-								:class="member.hasPosition ? 'ls-member-status--active' : 'ls-member-status--inactive'"
-								:title="member.hasPosition ? 'Sharing location' : 'Not sharing'" />
+								:class="memberStatusClass(member)"
+								:title="memberStatusTitle(member)" />
 						</li>
 					</ul>
 				</div>
@@ -223,6 +223,21 @@ export default {
 			}
 
 			this.fitBounds(members.filter((m) => m.hasPosition))
+		},
+
+		memberStatusClass(member) {
+			if (!member.hasPosition) return 'ls-member-status--inactive'
+			if (isStale(member.updatedAt, this.nowTs)) return 'ls-member-status--stale'
+			return 'ls-member-status--active'
+		},
+
+		memberStatusTitle(member) {
+			if (!member.hasPosition) return 'Not sharing'
+			if (isStale(member.updatedAt, this.nowTs)) {
+				const mins = Math.round((this.nowTs - member.updatedAt) / 60)
+				return `Last update ${mins} min ago`
+			}
+			return 'Sharing location'
 		},
 
 		updateStaleClasses() {
@@ -490,6 +505,10 @@ export default {
 
 .ls-member-status--active {
 	background: #46ba61;
+}
+
+.ls-member-status--stale {
+	background: var(--color-border-dark, #c8c8c8);
 }
 
 .ls-member-status--inactive {
