@@ -326,6 +326,11 @@ export default {
 <style>
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
+/* Ensure Vue root fills Nextcloud's content area so height:100% chain works */
+#locshare-app {
+	height: 100%;
+}
+
 #ls-map-container {
 	width: 100%;
 	height: 100%;

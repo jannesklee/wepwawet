@@ -167,12 +167,17 @@ export default {
 <style>
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
+/* Escape Nextcloud's public-page layout entirely — it has multiple nested
+   wrappers with max-width / padding constraints designed for file-share cards.
+   Fixed positioning anchors us directly to the viewport below the header. */
 #ls-viewer-wrap {
-	width: 100%;
-	height: 100%;
+	position: fixed;
+	top: var(--header-height, 50px);
+	left: 0;
+	right: 0;
+	bottom: 0;
 	display: flex;
 	flex-direction: column;
-	position: relative;
 }
 
 .ls-viewer-header {
