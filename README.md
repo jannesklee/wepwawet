@@ -10,8 +10,7 @@ A minimal Nextcloud app for live location sharing — the self-hosted alternativ
 
 ## Requirements
 
-- Nextcloud 28+
-- PHP 8.1+
+- Nextcloud 30–34
 
 ## Installation
 
