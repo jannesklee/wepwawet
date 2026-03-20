@@ -2,6 +2,11 @@
 
 A minimal Nextcloud app for live location sharing — the self-hosted alternative to WhatsApp Live Location / Google Family Sharing.
 
+## Screenshots
+
+![Share your location](img/screenshot_share.png)
+![Live viewer](img/screenshot_view.png)
+
 ## Features
 
 - **Timed share links** — create a link, share it with anyone. They open it in a browser, no account needed, and see your position on a live map.
