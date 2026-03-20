@@ -10,7 +10,6 @@ A minimal Nextcloud app for live location sharing — the self-hosted alternativ
 ## Features
 
 - **Timed share links** — create a link, share it with anyone. They open it in a browser, no account needed, and see your position on a live map.
-- **Group invite links** — invite others to a shared group. Everyone in the group sees each other's position. Guests can join without a Nextcloud account.
 - **No third-party services** — map tiles from OpenStreetMap, everything else stays on your Nextcloud.
 
 ## Requirements
