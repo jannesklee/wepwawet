@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -57,8 +60,10 @@ jobs:
           name: "LocShare ${{ github.ref_name }}"
           body: |
             See [CHANGELOG](https://github.com/jannesklee/locshare/blob/main/CHANGELOG.md) for what's new.
-          files: |
-            ${{ env.ARCHIVE }}
-            # ${{ env.ARCHIVE }}.sig   ← uncomment when signing is enabled
+          files: ${{ env.ARCHIVE }}
+          # When signing is enabled, change the line above to:
+          # files: |
+          #   ${{ env.ARCHIVE }}
+          #   ${{ env.ARCHIVE }}.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
