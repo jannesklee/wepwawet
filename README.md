@@ -37,3 +37,7 @@ docker exec --user www-data locshare-dev php occ app:enable locshare
 ```
 
 Access at http://localhost:8080 (admin / admin123).
+
+## License
+
+[AGPL-3.0](LICENSE) — the same license used by Nextcloud itself.
