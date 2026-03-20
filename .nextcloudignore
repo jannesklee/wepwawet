@@ -1,0 +1,24 @@
+# Development sources — not needed in the release tarball
+src/
+node_modules/
+.git/
+.github/
+
+# Build config
+vite.config.ts
+tsconfig*.json
+package.json
+package-lock.json
+babel.config.*
+.eslintrc*
+.eslintignore
+.stylelintrc*
+
+# Dev environment
+docker-compose*.yml
+.env*
+
+# Misc
+*.map
+.DS_Store
+*.log

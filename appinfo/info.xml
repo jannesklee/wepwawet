@@ -9,6 +9,10 @@
     <author>Jannes Klee</author>
     <namespace>LocShare</namespace>
     <category>social</category>
+    <website>https://github.com/jannesklee/locshare</website>
+    <bugs>https://github.com/jannesklee/locshare/issues</bugs>
+    <repository>https://github.com/jannesklee/locshare</repository>
+    <screenshot>https://raw.githubusercontent.com/jannesklee/locshare/main/img/screenshot.png</screenshot>
     <dependencies>
         <nextcloud min-version="30" max-version="34"/>
     </dependencies>
