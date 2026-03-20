@@ -105,6 +105,7 @@ import { NcContent, NcAppNavigation, NcAppContent, NcButton } from '@nextcloud/v
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import ContentCopyIcon from 'vue-material-design-icons/ContentCopy.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
+import { isStale } from './utils/stale.js'
 
 export default {
 	name: 'LocShareApp',
@@ -119,6 +120,8 @@ export default {
 			pollInterval: null,
 			markers: {},
 			members: [],
+			nowTs: Math.floor(Date.now() / 1000),
+			statusInterval: null,
 			// share management
 			shares: [],
 			shareMinutes: 60,
@@ -162,6 +165,10 @@ export default {
 
 			this.fetchPositions()
 			this.pollInterval = setInterval(() => this.fetchPositions(), 15000)
+			this.statusInterval = setInterval(() => {
+				this.nowTs = Math.floor(Date.now() / 1000)
+				this.updateStaleClasses()
+			}, 30000)
 			this.fetchShares()
 		})
 	},
@@ -169,6 +176,7 @@ export default {
 	beforeUnmount() {
 		if (this.watchId !== null) navigator.geolocation.clearWatch(this.watchId)
 		if (this.pollInterval !== null) clearInterval(this.pollInterval)
+		if (this.statusInterval !== null) clearInterval(this.statusInterval)
 		Object.values(this.markers).forEach((m) => m.remove())
 		if (this.map) this.map.remove()
 	},
@@ -186,6 +194,7 @@ export default {
 
 		updateMarkers(members) {
 			const seen = new Set()
+			this.nowTs = Math.floor(Date.now() / 1000)
 
 			for (const member of members) {
 				if (!member.hasPosition) continue
@@ -193,8 +202,11 @@ export default {
 
 				if (this.markers[member.userId]) {
 					this.markers[member.userId].setLngLat([member.lon, member.lat])
+					this.markers[member.userId].getElement()
+						.classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
 				} else {
 					const el = this.createMarkerEl(member)
+					el.classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
 					this.markers[member.userId] = new maplibregl.Marker({ element: el })
 						.setLngLat([member.lon, member.lat])
 						.setPopup(new maplibregl.Popup({ offset: 28, maxWidth: 'none' })
@@ -211,6 +223,14 @@ export default {
 			}
 
 			this.fitBounds(members.filter((m) => m.hasPosition))
+		},
+
+		updateStaleClasses() {
+			for (const member of this.members) {
+				if (!member.hasPosition || !this.markers[member.userId]) continue
+				this.markers[member.userId].getElement()
+					.classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
+			}
 		},
 
 		createMarkerEl(member) {
@@ -506,6 +526,12 @@ export default {
 .ls-marker--me {
 	border-color: var(--color-primary, #0082c9);
 	border-width: 3px;
+}
+
+.ls-marker--stale {
+	filter: grayscale(100%);
+	opacity: 0.5;
+	transition: filter 0.4s, opacity 0.4s;
 }
 
 .ls-marker img {

@@ -5,6 +5,7 @@
 			<img
 				v-if="state.ownerAvatarUrl"
 				class="ls-viewer-avatar"
+				:class="{ 'ls-viewer-avatar--stale': isStale }"
 				:src="state.ownerAvatarUrl"
 				:alt="state.ownerDisplayName" />
 			<div class="ls-viewer-info">
@@ -31,6 +32,7 @@
 <script>
 import maplibregl from 'maplibre-gl'
 import { loadState } from '@nextcloud/initial-state'
+import { isStale } from './utils/stale.js'
 
 export default {
 	name: 'LocShareViewer',
@@ -40,21 +42,37 @@ export default {
 			state: loadState('locshare', 'locshare-viewer-state'),
 			map: null,
 			marker: null,
+			markerEl: null,
+			popup: null,
 			pollInterval: null,
 			expiryInterval: null,
+			statusInterval: null,
 			expired: false,
 			lastUpdated: null,
 			expiryText: null,
+			nowTs: Math.floor(Date.now() / 1000),
 		}
 	},
 
 	computed: {
+		isStale() {
+			return isStale(this.lastUpdated, this.nowTs)
+		},
+
 		statusText() {
 			if (!this.lastUpdated) return 'Waiting for position…'
-			const ago = Math.round((Date.now() / 1000 - this.lastUpdated) / 60)
+			const ago = Math.round((this.nowTs - this.lastUpdated) / 60)
 			if (ago < 1) return 'Updated just now'
 			if (ago === 1) return 'Updated 1 min ago'
 			return `Updated ${ago} min ago`
+		},
+	},
+
+	watch: {
+		isStale(val) {
+			if (this.markerEl) {
+				this.markerEl.classList.toggle('ls-marker--stale', val)
+			}
 		},
 	},
 
@@ -80,6 +98,7 @@ export default {
 
 			this.fetchPosition()
 			this.pollInterval = setInterval(() => this.fetchPosition(), 10000)
+			this.statusInterval = setInterval(() => { this.nowTs = Math.floor(Date.now() / 1000) }, 30000)
 
 			if (this.state.expiresAt) {
 				this.updateExpiryText()
@@ -91,6 +110,7 @@ export default {
 	beforeUnmount() {
 		if (this.pollInterval) clearInterval(this.pollInterval)
 		if (this.expiryInterval) clearInterval(this.expiryInterval)
+		if (this.statusInterval) clearInterval(this.statusInterval)
 		if (this.marker) this.marker.remove()
 		if (this.map) this.map.remove()
 	},
@@ -117,13 +137,18 @@ export default {
 				if (!data.hasPosition) return
 
 				this.lastUpdated = data.updatedAt
+				this.nowTs = Math.floor(Date.now() / 1000)
 
 				if (this.marker) {
 					this.marker.setLngLat([data.lon, data.lat])
+					if (this.popup) this.popup.setHTML(this.buildPopupHtml())
 				} else {
-					const el = this.createMarkerEl()
-					this.marker = new maplibregl.Marker({ element: el })
+					this.markerEl = this.createMarkerEl()
+					this.popup = new maplibregl.Popup({ offset: 28, maxWidth: 'none' })
+						.setHTML(this.buildPopupHtml())
+					this.marker = new maplibregl.Marker({ element: this.markerEl })
 						.setLngLat([data.lon, data.lat])
+						.setPopup(this.popup)
 						.addTo(this.map)
 					this.map.flyTo({ center: [data.lon, data.lat], zoom: 13 })
 				}
@@ -144,6 +169,23 @@ export default {
 				el.textContent = this.state.ownerDisplayName.charAt(0).toUpperCase()
 			}
 			return el
+		},
+
+		buildPopupHtml() {
+			const name = this.state.ownerDisplayName
+			const avatar = this.state.ownerAvatarUrl
+				? `<img src="${this.state.ownerAvatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" />`
+				: `<span style="width:32px;height:32px;border-radius:50%;background:#0082c9;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${name.charAt(0).toUpperCase()}</span>`
+			const updated = this.lastUpdated
+				? new Date(this.lastUpdated * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+				: null
+			return `<div style="display:flex;align-items:center;gap:10px;padding:4px 2px;font-family:sans-serif;">
+				${avatar}
+				<div style="display:flex;flex-direction:column;gap:2px;">
+					<span style="font-size:13px;font-weight:600;color:#222;white-space:nowrap;">${name}</span>
+					${updated ? `<span style="font-size:11px;color:#767676;">Updated ${updated}</span>` : ''}
+				</div>
+			</div>`
 		},
 
 		updateExpiryText() {
@@ -197,6 +239,12 @@ export default {
 	border-radius: 50%;
 	object-fit: cover;
 	flex-shrink: 0;
+	transition: filter 0.4s, opacity 0.4s;
+}
+
+.ls-viewer-avatar--stale {
+	filter: grayscale(100%);
+	opacity: 0.5;
 }
 
 .ls-viewer-info {
@@ -279,6 +327,7 @@ export default {
 	justify-content: center;
 	cursor: pointer;
 	overflow: hidden;
+	transition: filter 0.4s, opacity 0.4s;
 }
 
 .ls-marker--me {
@@ -286,9 +335,23 @@ export default {
 	border-width: 3px;
 }
 
+.ls-marker--stale {
+	filter: grayscale(100%);
+	opacity: 0.5;
+}
+
 .ls-marker img {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
+}
+
+/* MapLibre popup reset */
+.maplibregl-popup-content {
+	padding: 10px 14px !important;
+	border-radius: 8px !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,.2) !important;
+	font-size: inherit !important;
+	line-height: inherit !important;
 }
 </style>
