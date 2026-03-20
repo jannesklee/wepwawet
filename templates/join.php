@@ -10,8 +10,10 @@ $userId = $_['user_id'] ?? null;
 $userDisplayName = $_['user_display_name'] ?? null;
 $mainUrl = $_['main_url'] ?? null;
 $debug = $_['debug'] ?? false;
+$swUrl = $_['sw_url'] ?? '';
 ?>
 <div id="locshare-join"
+	data-sw-url="<?= htmlspecialchars($swUrl, ENT_QUOTES) ?>"
 	data-guest-update-url="<?= htmlspecialchars($guestUpdateUrl, ENT_QUOTES) ?>"
 	data-accept-url="<?= htmlspecialchars($acceptUrl, ENT_QUOTES) ?>"
 	<?php if ($userId !== null): ?>

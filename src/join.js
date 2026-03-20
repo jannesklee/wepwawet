@@ -17,6 +17,13 @@
 		var container = document.getElementById('locshare-join')
 		if (!container) return
 
+		if ('serviceWorker' in navigator && container.dataset.swUrl) {
+			window.addEventListener('load', function () {
+				navigator.serviceWorker.register(container.dataset.swUrl)
+					.catch(function (err) { console.warn('SW registration failed:', err) })
+			})
+		}
+
 		var GUEST_UPDATE_URL = container.dataset.guestUpdateUrl
 		var ACCEPT_URL = container.dataset.acceptUrl
 		var LOGGED_IN_USER_ID = container.dataset.userId || null

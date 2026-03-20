@@ -15,6 +15,7 @@ use OCP\AppFramework\Http\Attribute\BruteForceProtection;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
+use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\Template\PublicTemplateResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
@@ -60,9 +61,13 @@ class PageController extends Controller {
 				. $this->urlGenerator->linkToRoute('locshare.page.join', ['token' => $group->getToken()]),
 			'positionsUrl' => $this->urlGenerator->linkToRoute('locshare.group.positions', ['id' => $group->getId()]),
 			'updateUrl' => $this->urlGenerator->linkToRoute('locshare.position.update'),
+			'swUrl' => $this->urlGenerator->linkToRoute('locshare.page.serviceWorker'),
 		];
 
 		$this->initialState->provideInitialState('locshare-state', $state);
+
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.manifest')]);
+		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
 
 		return new TemplateResponse(Application::APP_ID, 'main');
 	}
@@ -103,7 +108,12 @@ class PageController extends Controller {
 			'user_id' => $this->userId,
 			'user_display_name' => $userDisplayName,
 			'debug' => $this->config->getSystemValueBool('debug', false),
+			'sw_url' => $this->urlGenerator->linkToRoute('locshare.page.serviceWorker'),
 		]);
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.joinManifest', ['token' => $token])]);
+		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', 'apple-touch-icon.png'))]);
+		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
+
 		$response->setHeaderTitle($this->l->t('Share your location'));
 		$response->setFooterVisible(false);
 		return $response;
@@ -139,13 +149,83 @@ class PageController extends Controller {
 			'ownerAvatarUrl' => '/index.php/avatar/' . urlencode($share->getOwnerUserId()) . '/64',
 			'positionUrl' => $this->urlGenerator->linkToRoute('locshare.share.position', ['token' => $token]),
 			'expiresAt' => $share->getExpiresAt(),
+			'swUrl' => $this->urlGenerator->linkToRoute('locshare.page.serviceWorker'),
 		];
 
 		$this->initialState->provideInitialState('locshare-viewer-state', $state);
 
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.viewerManifest', ['token' => $token])]);
+		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', 'apple-touch-icon.png'))]);
+		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
+
 		$response = new PublicTemplateResponse(Application::APP_ID, 'viewer', []);
 		$response->setHeaderTitle($ownerDisplayName . ' — ' . $this->l->t('Live location'));
 		$response->setFooterVisible(false);
+		return $response;
+	}
+
+	#[PublicPage]
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function serviceWorker(): TemplateResponse {
+		$response = new TemplateResponse(Application::APP_ID, 'sw', [], TemplateResponse::RENDER_AS_BLANK);
+		$response->addHeader('Content-Type', 'application/javascript');
+		$response->addHeader('Service-Worker-Allowed', $this->urlGenerator->linkToRoute('locshare.page.index'));
+		return $response;
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function manifest(): DataResponse {
+		return $this->buildManifest(
+			name: 'LocShare',
+			startUrl: $this->urlGenerator->linkToRoute('locshare.page.index'),
+			scope: $this->urlGenerator->linkToRoute('locshare.page.index'),
+		);
+	}
+
+	#[PublicPage]
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function viewerManifest(string $token): DataResponse {
+		try {
+			$share = $this->shareMapper->findByToken($token);
+			$ownerUser = $this->userManager->get($share->getOwnerUserId());
+			$name = ($ownerUser !== null ? $ownerUser->getDisplayName() : $share->getOwnerUserId()) . ' — Live location';
+		} catch (DoesNotExistException $e) {
+			$name = 'LocShare';
+		}
+		$url = $this->urlGenerator->linkToRoute('locshare.page.view', ['token' => $token]);
+		return $this->buildManifest(name: $name, startUrl: $url, scope: $url);
+	}
+
+	#[PublicPage]
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function joinManifest(string $token): DataResponse {
+		$url = $this->urlGenerator->linkToRoute('locshare.page.join', ['token' => $token]);
+		return $this->buildManifest(name: 'Share location', startUrl: $url, scope: $url);
+	}
+
+	private function buildManifest(string $name, string $startUrl, string $scope): DataResponse {
+		$iconBase = $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', ''));
+		$manifest = [
+			'name' => $name,
+			'short_name' => 'LocShare',
+			'description' => 'Live location sharing',
+			'start_url' => $startUrl,
+			'scope' => $scope,
+			'display' => 'standalone',
+			'background_color' => '#ffffff',
+			'theme_color' => '#0082c9',
+			'icons' => [
+				['src' => $iconBase . 'icon-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
+				['src' => $iconBase . 'icon-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
+				['src' => $iconBase . 'app.svg',      'sizes' => 'any',     'type' => 'image/svg+xml'],
+			],
+		];
+		$response = new DataResponse($manifest);
+		$response->addHeader('Content-Type', 'application/manifest+json');
 		return $response;
 	}
 

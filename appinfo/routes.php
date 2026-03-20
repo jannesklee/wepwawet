@@ -7,6 +7,12 @@ return [
 		['name' => 'page#join', 'url' => '/join/{token}', 'verb' => 'GET'],
 		['name' => 'page#view', 'url' => '/view/{token}', 'verb' => 'GET'],
 
+		// PWA manifests + service worker
+		['name' => 'page#manifest', 'url' => '/manifest.webmanifest', 'verb' => 'GET'],
+		['name' => 'page#viewerManifest', 'url' => '/view/{token}/manifest.webmanifest', 'verb' => 'GET'],
+		['name' => 'page#joinManifest', 'url' => '/join/{token}/manifest.webmanifest', 'verb' => 'GET'],
+		['name' => 'page#serviceWorker', 'url' => '/sw.js', 'verb' => 'GET'],
+
 		// Group management
 		['name' => 'group#accept', 'url' => '/join/{token}/accept', 'verb' => 'POST'],
 		['name' => 'group#positions', 'url' => '/group/{id}/positions', 'verb' => 'GET'],
