@@ -17,6 +17,15 @@ class ShareMapper extends QBMapper {
 	}
 
 	/** @throws DoesNotExistException */
+	public function find(int $id): Share {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
+		return $this->findEntity($qb);
+	}
+
+	/** @throws DoesNotExistException */
 	public function findByToken(string $token): Share {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')

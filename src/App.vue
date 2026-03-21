@@ -393,22 +393,25 @@ export default {
 	gap: 6px;
 }
 
-.ls-dur-btn {
+.ls-duration-row .ls-dur-btn {
 	padding: 7px 2px;
 	font-size: 12px;
 	font-weight: 600;
-	border: 1px solid var(--color-border, #ddd);
+	border: 2px solid var(--color-border, #ddd);
 	border-radius: var(--border-radius, 3px);
 	background: var(--color-main-background, #fff);
-	color: var(--color-main-text, #222);
+	color: var(--color-text-maxcontrast, #000000);
 	cursor: pointer;
+	transition: border-color 0.1s, color 0.1s;
 }
 
-.ls-dur-btn--active {
-	background: var(--color-primary, #0082c9);
-	color: var(--color-primary-text, #fff);
+.ls-duration-row .ls-dur-btn--active,
+.ls-duration-row .ls-dur-btn:active {
+	background-color: var(--color-primary, #0082c9) !important;
+	color: var(--color-primary-text, #fff) !important;
 	border-color: var(--color-primary, #0082c9);
 }
+
 
 /* Active share list */
 .ls-share-list {
