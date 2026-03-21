@@ -1,5 +1,7 @@
 # LocShare
 
+> **Alpha:** This app is in early development. Expect rough edges and breaking changes.
+
 A minimal Nextcloud app for live location sharing — the self-hosted alternative to WhatsApp Live Location / Google Family Sharing.
 
 ## Screenshots
