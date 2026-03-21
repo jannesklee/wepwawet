@@ -118,10 +118,13 @@ export default {
 			state: loadState('locshare', 'locshare-state'),
 			watchId: null,
 			pollInterval: null,
+			heartbeatInterval: null,
 			markers: {},
 			members: [],
 			nowTs: Math.floor(Date.now() / 1000),
 			statusInterval: null,
+			lastPosition: null,
+			wakeLock: null,
 			// share management
 			shares: [],
 			shareMinutes: 60,
@@ -149,19 +152,19 @@ export default {
 			})
 
 			this.watchId = navigator.geolocation.watchPosition(
-				(pos) => {
-					axios.post(this.state.updateUrl, {
-						lat: pos.coords.latitude,
-						lon: pos.coords.longitude,
-						accuracy: pos.coords.accuracy ?? null,
-						altitude: pos.coords.altitude ?? null,
-						speed: pos.coords.speed ?? null,
-						bearing: pos.coords.heading ?? null,
-					}).catch((e) => console.error('Failed to update position', e))
-				},
+				(pos) => this.sendPosition(pos),
 				(err) => console.warn('Geolocation error', err),
-				{ enableHighAccuracy: true },
+				{ enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 },
 			)
+
+			// Heartbeat: re-send last known position every 30s in case watchPosition
+			// stops firing (stationary device, browser throttling, etc.)
+			this.heartbeatInterval = setInterval(() => {
+				if (this.lastPosition) this.sendPosition(this.lastPosition)
+			}, 30000)
+
+			this.acquireWakeLock()
+			document.addEventListener('visibilitychange', this.onVisibilityChange)
 
 			this.fetchPositions()
 			this.pollInterval = setInterval(() => this.fetchPositions(), 15000)
@@ -176,12 +179,53 @@ export default {
 	beforeUnmount() {
 		if (this.watchId !== null) navigator.geolocation.clearWatch(this.watchId)
 		if (this.pollInterval !== null) clearInterval(this.pollInterval)
+		if (this.heartbeatInterval !== null) clearInterval(this.heartbeatInterval)
 		if (this.statusInterval !== null) clearInterval(this.statusInterval)
+		document.removeEventListener('visibilitychange', this.onVisibilityChange)
+		this.releaseWakeLock()
 		Object.values(this.markers).forEach((m) => m.remove())
 		if (this.map) this.map.remove()
 	},
 
 	methods: {
+		sendPosition(pos) {
+			this.lastPosition = pos
+			axios.post(this.state.updateUrl, {
+				lat: pos.coords.latitude,
+				lon: pos.coords.longitude,
+				accuracy: pos.coords.accuracy ?? null,
+				altitude: pos.coords.altitude ?? null,
+				speed: pos.coords.speed ?? null,
+				bearing: pos.coords.heading ?? null,
+			}).catch((e) => console.error('Failed to update position', e))
+		},
+
+		async acquireWakeLock() {
+			if (!('wakeLock' in navigator)) return
+			try {
+				this.wakeLock = await navigator.wakeLock.request('screen')
+			} catch (e) {
+				console.warn('Wake lock not granted', e)
+			}
+		},
+
+		releaseWakeLock() {
+			if (this.wakeLock) {
+				this.wakeLock.release()
+				this.wakeLock = null
+			}
+		},
+
+		// Re-acquire wake lock when tab becomes visible again (it is released automatically
+		// when the tab goes to the background)
+		onVisibilityChange() {
+			if (document.visibilityState === 'visible') {
+				this.acquireWakeLock()
+				// Also send an immediate heartbeat so we don't wait up to 30s
+				if (this.lastPosition) this.sendPosition(this.lastPosition)
+			}
+		},
+
 		async fetchPositions() {
 			try {
 				const { data } = await axios.get(this.state.positionsUrl)
