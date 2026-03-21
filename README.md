@@ -18,10 +18,11 @@ A minimal Nextcloud app for live location sharing — the self-hosted alternativ
 
 ## Installation
 
-Place the `locshare` folder in your Nextcloud `custom_apps/` directory and enable it:
+Place the `locshare` folder in your Nextcloud `custom_apps/` or `apps/` directory and enable it:
 
 ```bash
 php occ app:enable locshare
+php occ maintenance:repair
 ```
 
 ## Development
@@ -40,6 +41,10 @@ docker exec --user www-data locshare-dev php occ app:enable locshare
 ```
 
 Access at http://localhost:8080 (admin / admin123).
+
+## Mobile
+
+For the best experience on mobile, add LocShare to your home screen by logging into your Nextcloud instance via browser and navigating to LocShare. On Android (Chrome) and iOS (Safari) the browser should show an install prompt automatically. On other browsers use the "Add to Home Screen" option in the browser menu.
 
 ## License
 
