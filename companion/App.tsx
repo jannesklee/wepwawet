@@ -3,6 +3,7 @@
 import './src/locationTask';
 
 import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { loadConfig, type AppConfig } from './src/config';
@@ -20,7 +21,13 @@ export default function App() {
     });
   }, []);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#0082c9" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
