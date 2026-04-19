@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "LocShare",
+    "slug": "locshare-companion",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "com.locshare.companion",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "LocShare needs your location to share it with others.",
+        "NSLocationAlwaysUsageDescription": "LocShare needs your location in the background to continuously share it.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "LocShare needs your location in the background to continuously share it.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
+    },
+    "android": {
+      "package": "com.locshare.companion",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "LocShare needs your location in the background to continuously share it.",
+          "locationAlwaysPermission": "LocShare needs your location in the background to continuously share it.",
+          "locationWhenInUsePermission": "LocShare needs your location to share it with others.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
+    ]
+  }
+}

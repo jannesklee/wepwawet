@@ -34,6 +34,45 @@ class GroupController extends Controller {
 	}
 
 	/**
+	 * Returns the current user's group info for the companion app.
+	 * Finds the group without auto-creating one (the web app does that on first login).
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function me(): DataResponse {
+		$owned = $this->groupMapper->findByOwner($this->userId);
+		if (count($owned) > 0) {
+			$group = $owned[0];
+		} else {
+			$group = null;
+			foreach ($this->groupMemberMapper->findByUser($this->userId) as $membership) {
+				try {
+					$group = $this->groupMapper->find($membership->getGroupId());
+					break;
+				} catch (DoesNotExistException $e) {
+					continue;
+				}
+			}
+		}
+
+		if ($group === null) {
+			return new DataResponse(
+				['error' => 'no_group', 'message' => 'Open the LocShare web app first to create your group.'],
+				Http::STATUS_NOT_FOUND,
+			);
+		}
+
+		return new DataResponse([
+			'groupId'      => $group->getId(),
+			'groupToken'   => $group->getToken(),
+			'inviteUrl'    => rtrim($this->urlGenerator->getAbsoluteURL('/'), '/')
+				. $this->urlGenerator->linkToRoute('locshare.page.join', ['token' => $group->getToken()]),
+			'positionsUrl' => $this->urlGenerator->linkToRoute('locshare.group.positions', ['id' => $group->getId()]),
+			'updateUrl'    => $this->urlGenerator->linkToRoute('locshare.position.update'),
+		]);
+	}
+
+	/**
 	 * Logged-in user accepts an invite link and joins the group.
 	 */
 	#[NoAdminRequired]
