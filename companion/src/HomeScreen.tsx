@@ -336,6 +336,67 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
               </View>
             </View>
 
+            {/* ── Share links (authenticated only) ── */}
+            {config.mode === 'nextcloud' && (
+              <View style={styles.card}>
+                <Text style={styles.sectionLabel}>Share my location</Text>
+                <Text style={styles.sectionNote}>
+                  A temporary link anyone can open to watch, no account needed.
+                </Text>
+
+                <View style={styles.durationRow}>
+                  {DURATIONS.map(({ minutes, label }) => (
+                    <TouchableOpacity
+                      key={minutes}
+                      style={[
+                        styles.durBtn,
+                        shareMinutes === minutes && styles.durBtnActive,
+                      ]}
+                      onPress={() => setShareMinutes(minutes)}
+                    >
+                      <Text
+                        style={[
+                          styles.durBtnText,
+                          shareMinutes === minutes && styles.durBtnTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.createBtn, creatingShare && styles.createBtnDisabled]}
+                  onPress={handleCreateShare}
+                  disabled={creatingShare}
+                >
+                  {creatingShare ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.createBtnText}>+ Create share link</Text>
+                  )}
+                </TouchableOpacity>
+
+                {shares.length > 0 && (
+                  <>
+                    <Text style={[styles.sectionLabel, { marginTop: 20 }]}>
+                      Active links
+                    </Text>
+                    {shares.map((share) => (
+                      <ShareRow
+                        key={share.id}
+                        share={share}
+                        copied={copiedId === share.id}
+                        onCopy={() => handleCopy(share)}
+                        onRevoke={() => handleRevoke(share)}
+                      />
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+
             {/* ── Groups overview (authenticated only) ── */}
             {config.mode === 'nextcloud' && (
               <View style={styles.card}>
@@ -406,67 +467,6 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
                     )}
                   </TouchableOpacity>
                 </View>
-              </View>
-            )}
-
-            {/* ── Share links (authenticated only) ── */}
-            {config.mode === 'nextcloud' && (
-              <View style={styles.card}>
-                <Text style={styles.sectionLabel}>Share my location</Text>
-                <Text style={styles.sectionNote}>
-                  A temporary link anyone can open to watch, no account needed.
-                </Text>
-
-                <View style={styles.durationRow}>
-                  {DURATIONS.map(({ minutes, label }) => (
-                    <TouchableOpacity
-                      key={minutes}
-                      style={[
-                        styles.durBtn,
-                        shareMinutes === minutes && styles.durBtnActive,
-                      ]}
-                      onPress={() => setShareMinutes(minutes)}
-                    >
-                      <Text
-                        style={[
-                          styles.durBtnText,
-                          shareMinutes === minutes && styles.durBtnTextActive,
-                        ]}
-                      >
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.createBtn, creatingShare && styles.createBtnDisabled]}
-                  onPress={handleCreateShare}
-                  disabled={creatingShare}
-                >
-                  {creatingShare ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.createBtnText}>+ Create share link</Text>
-                  )}
-                </TouchableOpacity>
-
-                {shares.length > 0 && (
-                  <>
-                    <Text style={[styles.sectionLabel, { marginTop: 20 }]}>
-                      Active links
-                    </Text>
-                    {shares.map((share) => (
-                      <ShareRow
-                        key={share.id}
-                        share={share}
-                        copied={copiedId === share.id}
-                        onCopy={() => handleCopy(share)}
-                        onRevoke={() => handleRevoke(share)}
-                      />
-                    ))}
-                  </>
-                )}
               </View>
             )}
           </>

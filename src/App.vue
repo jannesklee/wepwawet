@@ -73,41 +73,6 @@
 				</template>
 
 				<template v-else>
-				<!-- Groups overview (Mode 1) -->
-				<div class="ls-nav-section">
-					<h3 class="ls-nav-heading">Groups</h3>
-					<p class="ls-share-expiry" style="margin-bottom:6px;">
-						Everyone in a group can see each other's location.
-					</p>
-
-					<div v-for="group in groups" :key="group.id" class="ls-group-overview-row">
-						<button class="ls-group-name-link" @click="openGroupId = group.id">
-							{{ group.name }} <span class="ls-chevron">›</span>
-						</button>
-						<label class="ls-group-visible">
-							<input
-								type="checkbox"
-								:checked="group.visible"
-								@change="toggleGroupVisibility(group)" />
-							Visible here
-						</label>
-					</div>
-
-					<div class="ls-new-group-row">
-						<input
-							v-model="newGroupName"
-							class="ls-invite-input"
-							placeholder="New group name"
-							@keyup.enter="createGroup" />
-						<NcButton
-							type="tertiary"
-							:disabled="creatingGroup || !newGroupName.trim()"
-							@click="createGroup">
-							+ Create
-						</NcButton>
-					</div>
-				</div>
-
 				<!-- Share location (Mode 2) -->
 				<div class="ls-nav-section">
 					<h3 class="ls-nav-heading">Share my location</h3>
@@ -164,6 +129,41 @@
 							</p>
 						</li>
 					</ul>
+				</div>
+
+				<!-- Groups overview (Mode 1) -->
+				<div class="ls-nav-section">
+					<h3 class="ls-nav-heading">Groups</h3>
+					<p class="ls-share-expiry" style="margin-bottom:6px;">
+						Everyone in a group can see each other's location.
+					</p>
+
+					<div v-for="group in groups" :key="group.id" class="ls-group-overview-row">
+						<button class="ls-group-name-link" @click="openGroupId = group.id">
+							{{ group.name }} <span class="ls-chevron">›</span>
+						</button>
+						<label class="ls-group-visible">
+							<input
+								type="checkbox"
+								:checked="group.visible"
+								@change="toggleGroupVisibility(group)" />
+							Visible here
+						</label>
+					</div>
+
+					<div class="ls-new-group-row">
+						<input
+							v-model="newGroupName"
+							class="ls-invite-input"
+							placeholder="New group name"
+							@keyup.enter="createGroup" />
+						<NcButton
+							type="tertiary"
+							:disabled="creatingGroup || !newGroupName.trim()"
+							@click="createGroup">
+							+ Create
+						</NcButton>
+					</div>
 				</div>
 				</template>
 			</template>
