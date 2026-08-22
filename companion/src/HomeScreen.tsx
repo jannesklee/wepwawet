@@ -43,6 +43,7 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
   const [sharing, setSharing] = useState(false);
   const [statusChecked, setStatusChecked] = useState(false);
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
+  const [groupInfoFailed, setGroupInfoFailed] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [shares, setShares] = useState<Share[]>([]);
   const [shareMinutes, setShareMinutes] = useState(60);
@@ -53,6 +54,17 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
 
   // Keep ref in sync so the poll interval can access it without a stale closure
   groupInfoRef.current = groupInfo;
+
+  const loadGroupInfo = useCallback(async () => {
+    setGroupInfoFailed(false);
+    const info = await fetchGroupInfo(config);
+    if (info) {
+      setGroupInfo(info);
+      fetchMembers(config, info.groupId).then(setMembers);
+    } else {
+      setGroupInfoFailed(true);
+    }
+  }, [config]);
 
   const refreshMembers = useCallback(async () => {
     if (groupInfoRef.current) {
@@ -75,15 +87,16 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
     });
 
     if (config.mode === 'nextcloud') {
-      fetchGroupInfo(config).then((info) => {
-        setGroupInfo(info);
-        if (info) fetchMembers(config, info.groupId).then(setMembers);
-      });
+      loadGroupInfo();
       fetchShares(config).then(setShares);
     }
 
     pollRef.current = setInterval(() => {
-      refreshMembers();
+      if (groupInfoRef.current) {
+        refreshMembers();
+      } else if (config.mode === 'nextcloud') {
+        loadGroupInfo();
+      }
       refreshShares();
     }, 15000);
     return () => {
@@ -157,17 +170,20 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
         <TouchableOpacity
           style={styles.settingsBtn}
           onPress={() => {
-            Alert.alert('Reconfigure', 'Clear current settings and set up again?', [
-              {
-                text: 'Yes, reconfigure',
-                style: 'destructive',
-                onPress: async () => {
-                  await stopSharing();
-                  onReconfigure();
+            Alert.alert(
+              'Edit settings',
+              'Sharing will stop while you edit your connection settings.',
+              [
+                {
+                  text: 'Continue',
+                  onPress: async () => {
+                    await stopSharing();
+                    onReconfigure();
+                  },
                 },
-              },
-              { text: 'Cancel', style: 'cancel' },
-            ]);
+                { text: 'Cancel', style: 'cancel' },
+              ],
+            );
           }}
         >
           <Text style={styles.settingsIcon}>⚙️</Text>
@@ -211,6 +227,9 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
         {config.mode === 'nextcloud' && (
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>Share my location</Text>
+            <Text style={styles.sectionNote}>
+              A temporary link anyone can open to watch, no account needed.
+            </Text>
 
             <View style={styles.durationRow}>
               {DURATIONS.map(({ minutes, label }) => (
@@ -269,12 +288,21 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
         {config.mode === 'nextcloud' && (
           <View style={styles.card}>
             <Text style={styles.sectionLabel}>Group members</Text>
-            {members.length === 0 ? (
-              <Text style={styles.emptyNote}>
-                {groupInfo ? 'No positions yet' : 'Loading…'}
-              </Text>
+            {groupInfo ? (
+              members.length === 0 ? (
+                <Text style={styles.emptyNote}>No positions yet</Text>
+              ) : (
+                members.map((m) => <MemberRow key={m.userId} member={m} />)
+              )
+            ) : groupInfoFailed ? (
+              <View style={styles.retryBlock}>
+                <Text style={styles.retryNote}>Couldn't reach the server.</Text>
+                <TouchableOpacity style={styles.retryBtn} onPress={loadGroupInfo}>
+                  <Text style={styles.retryBtnText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              members.map((m) => <MemberRow key={m.userId} member={m} />)
+              <Text style={styles.emptyNote}>Loading…</Text>
             )}
           </View>
         )}
@@ -415,6 +443,12 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     marginBottom: 12,
   },
+  sectionNote: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: -8,
+    marginBottom: 14,
+  },
 
   durationRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   durBtn: {
@@ -472,4 +506,15 @@ const styles = StyleSheet.create({
   memberDot: { width: 8, height: 8, borderRadius: 4 },
 
   emptyNote: { fontSize: 14, color: '#9ca3af', textAlign: 'center', paddingVertical: 8 },
+
+  retryBlock: { alignItems: 'center', paddingVertical: 8, gap: 10 },
+  retryNote: { fontSize: 14, color: '#dc2626' },
+  retryBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+  },
+  retryBtnText: { fontSize: 13, fontWeight: '600', color: PRIMARY },
 });

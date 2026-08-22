@@ -23,6 +23,8 @@ import { fetchGroupInfo } from './api';
 
 interface Props {
   onSaved: (config: AppConfig) => void;
+  initialConfig?: AppConfig | null;
+  onCancel?: () => void;
 }
 
 const DURATIONS = [
@@ -32,21 +34,31 @@ const DURATIONS = [
   { minutes: 0, label: '∞' },
 ] as const;
 
-export default function SetupScreen({ onSaved }: Props) {
-  const [mode, setMode] = useState<AuthMode>('nextcloud');
+export default function SetupScreen({ onSaved, initialConfig, onCancel }: Props) {
+  const [mode, setMode] = useState<AuthMode>(initialConfig?.mode ?? 'nextcloud');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Nextcloud fields
-  const [serverUrl, setServerUrl] = useState('');
-  const [username, setUsername] = useState('');
-  const [appPassword, setAppPassword] = useState('');
+  const [serverUrl, setServerUrl] = useState(
+    initialConfig?.mode === 'nextcloud' ? initialConfig.serverUrl : '',
+  );
+  const [username, setUsername] = useState(initialConfig?.username ?? '');
+  const [appPassword, setAppPassword] = useState(initialConfig?.appPassword ?? '');
   const [showPassword, setShowPassword] = useState(false);
 
   // Guest fields
-  const [inviteUrl, setInviteUrl] = useState('');
-  const [guestName, setGuestName] = useState('');
-  const [guestDuration, setGuestDuration] = useState(60);
+  const [inviteUrl, setInviteUrl] = useState(
+    initialConfig?.mode === 'guest'
+      ? `${initialConfig.serverUrl}/apps/locshare/join/${initialConfig.guestToken}`
+      : '',
+  );
+  const [guestName, setGuestName] = useState(initialConfig?.guestName ?? '');
+  const [guestDuration, setGuestDuration] = useState(
+    initialConfig?.mode === 'guest' && initialConfig.guestDuration > 0
+      ? initialConfig.guestDuration
+      : 60,
+  );
 
   const canSave =
     mode === 'nextcloud'
@@ -113,6 +125,11 @@ export default function SetupScreen({ onSaved }: Props) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
+            {onCancel && (
+              <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            )}
             <Text style={styles.title}>LocShare</Text>
             <Text style={styles.subtitle}>Connect to your Nextcloud</Text>
           </View>
@@ -282,7 +299,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { padding: 24, paddingBottom: 48 },
 
-  header: { alignItems: 'center', marginBottom: 32 },
+  header: { alignItems: 'center', marginBottom: 32, position: 'relative' },
+  cancelBtn: { position: 'absolute', top: 2, right: 0, padding: 6 },
+  cancelBtnText: { fontSize: 15, color: '#6b7280', fontWeight: '500' },
   title: { fontSize: 32, fontWeight: '700', color: PRIMARY, letterSpacing: -0.5 },
   subtitle: { fontSize: 15, color: '#767676', marginTop: 4 },
 

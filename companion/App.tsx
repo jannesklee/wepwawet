@@ -13,6 +13,7 @@ import HomeScreen from './src/HomeScreen';
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reconfiguring, setReconfiguring] = useState(false);
 
   useEffect(() => {
     loadConfig().then((c) => {
@@ -32,10 +33,17 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      {config?.isValid ? (
-        <HomeScreen config={config} onReconfigure={() => setConfig(null)} />
+      {config?.isValid && !reconfiguring ? (
+        <HomeScreen config={config} onReconfigure={() => setReconfiguring(true)} />
       ) : (
-        <SetupScreen onSaved={setConfig} />
+        <SetupScreen
+          initialConfig={config}
+          onSaved={(c) => {
+            setConfig(c);
+            setReconfiguring(false);
+          }}
+          onCancel={config?.isValid ? () => setReconfiguring(false) : undefined}
+        />
       )}
     </SafeAreaProvider>
   );
