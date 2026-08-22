@@ -35,6 +35,7 @@ One unrelated wrinkle turned up during that clean rebuild: **`configureCMakeDebu
 - Launch the AVD with snapshotting disabled: `emulator -avd Pixel_4 -netdelay none -netspeed full -no-snapshot-save -no-snapshot-load`.
 - Fake GPS on the emulator: `adb emu geo fix <lon> <lat>`.
 - After every fresh emulator boot or `expo run:android` reinstall, re-run `adb reverse tcp:8081 tcp:8081` before trying to connect the dev client.
+- Rapid `am force-stop` + relaunch cycles (e.g. while scripting the app via `adb`) can trigger transient crashes unrelated to app code: seen once as a `NullPointerException` in `SharedPreferences.getAll()` on `ExpoLocation.startLocationUpdatesAsync`, and once inside React Native's own dev-inspector WebSocket handling (`CxxInspectorPackagerConnection$WebSocketDelegate.didReceiveMessage`). Both self-resolved after one clean force-stop + relaunch with a few seconds to settle — treat as dev-tooling flakiness from reconnecting to Metro too quickly, not a real bug, unless it recurs consistently.
 
 ## OpenStreetMap tiles blocked with "Referer is required by tile usage policy"
 
