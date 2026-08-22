@@ -68,8 +68,15 @@ class PageController extends Controller {
 
 		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.manifest')]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
+		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
+		// strips the Referer header on OSM tile requests - OSM's tile usage policy
+		// rejects requests with no Referer at all. A <meta name="referrer"> element
+		// can relax this for the document's own outgoing requests even though the
+		// HTTP header itself can't be overridden from app code.
+		\OCP\Util::addHeader('meta', ['name' => 'referrer', 'content' => 'strict-origin-when-cross-origin']);
 
-		return new TemplateResponse(Application::APP_ID, 'main');
+		$response = new TemplateResponse(Application::APP_ID, 'main');
+		return $response;
 	}
 
 	#[PublicPage]
@@ -113,6 +120,12 @@ class PageController extends Controller {
 		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.joinManifest', ['token' => $token])]);
 		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', 'apple-touch-icon.png'))]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
+		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
+		// strips the Referer header on OSM tile requests - OSM's tile usage policy
+		// rejects requests with no Referer at all. A <meta name="referrer"> element
+		// can relax this for the document's own outgoing requests even though the
+		// HTTP header itself can't be overridden from app code.
+		\OCP\Util::addHeader('meta', ['name' => 'referrer', 'content' => 'strict-origin-when-cross-origin']);
 
 		$response->setHeaderTitle($this->l->t('Share your location'));
 		$response->setFooterVisible(false);
@@ -157,6 +170,12 @@ class PageController extends Controller {
 		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.viewerManifest', ['token' => $token])]);
 		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', 'apple-touch-icon.png'))]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
+		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
+		// strips the Referer header on OSM tile requests - OSM's tile usage policy
+		// rejects requests with no Referer at all. A <meta name="referrer"> element
+		// can relax this for the document's own outgoing requests even though the
+		// HTTP header itself can't be overridden from app code.
+		\OCP\Util::addHeader('meta', ['name' => 'referrer', 'content' => 'strict-origin-when-cross-origin']);
 
 		$response = new PublicTemplateResponse(Application::APP_ID, 'viewer', []);
 		$response->setHeaderTitle($ownerDisplayName . ' — ' . $this->l->t('Live location'));
