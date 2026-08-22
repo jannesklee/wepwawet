@@ -167,7 +167,10 @@ export default {
 			document.addEventListener('visibilitychange', this.onVisibilityChange)
 
 			this.fetchPositions()
-			this.pollInterval = setInterval(() => this.fetchPositions(), 15000)
+			this.pollInterval = setInterval(() => {
+				this.fetchPositions()
+				this.fetchShares()
+			}, 15000)
 			this.statusInterval = setInterval(() => {
 				this.nowTs = Math.floor(Date.now() / 1000)
 				this.updateStaleClasses()

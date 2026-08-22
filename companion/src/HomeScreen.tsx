@@ -61,6 +61,13 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
     }
   }, [config]);
 
+  const refreshShares = useCallback(async () => {
+    if (config.mode === 'nextcloud') {
+      const data = await fetchShares(config);
+      setShares(data);
+    }
+  }, [config]);
+
   useEffect(() => {
     isSharing().then((active) => {
       setSharing(active);
@@ -75,7 +82,10 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
       fetchShares(config).then(setShares);
     }
 
-    pollRef.current = setInterval(refreshMembers, 15000);
+    pollRef.current = setInterval(() => {
+      refreshMembers();
+      refreshShares();
+    }, 15000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
