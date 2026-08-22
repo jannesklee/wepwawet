@@ -35,6 +35,12 @@ docker exec --user www-data locshare-dev php occ maintenance:repair
 ## 2. Start the companion app + Android emulator
 
 ```bash
+# Check first: is an instance already running from an earlier session (crashed shell,
+# left in the background, etc.)? A second launch against the same AVD fails with
+# "FATAL: Running multiple emulators with the same AVD is an experimental feature."
+pgrep -fl "qemu-system.*Pixel_4"
+# If so, stop it cleanly before continuing: adb emu kill
+
 # Emulator, with snapshot-save disabled (see dev-notes.md #1)
 /home/jklee/Android/Sdk/emulator/emulator -avd Pixel_4 -netdelay none -netspeed full -no-snapshot-save -no-snapshot-load &
 
@@ -58,12 +64,21 @@ JAVA_TOOL_OPTIONS="--enable-native-access=ALL-UNNAMED" npx expo run:android
 The install step's deep link points at the host's LAN IP, which the emulator's NAT can't reach (see `dev-notes.md` #2). Every time you reinstall, or restart the emulator, or the app ends up stuck on the Dev Launcher home screen:
 
 ```bash
+# Metro must actually be running first — `npx expo run:android` starts one,
+# but if you're just reconnecting to an already-installed build, start it yourself:
+cd companion && npx expo start
+# confirm: curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8081/status   (expect 200)
+
 adb reverse tcp:8081 tcp:8081
 adb shell am start -a android.intent.action.VIEW \
   -d "exp+locshare-companion://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
 ```
 
-`adb reverse` mappings don't survive an emulator restart or a long idle period — check with `adb reverse --list` if the app seems stuck.
+`adb reverse` mappings don't survive an emulator restart or a long idle period — check with `adb reverse --list` if the app seems stuck. Without a live Metro server, the same command lands on the Dev Launcher error screen and looks identical to a broken tunnel — check `curl .../status` before assuming it's the reverse mapping.
+
+If instead the app briefly appears then dies with no error, or bounces back to the launcher, check `adb logcat -d | grep -i lowmemorykiller` before re-checking the tunnel — the default AVD RAM (2048MB) is too small and the OS silently kills the app during native-module init. See `dev-notes.md` #7 for the fix (`hw.ramSize=4096` in the AVD's `config.ini`).
+
+Also: right after a fresh emulator boot, `am start` can transiently fail with `cmd: Can't find service: activity` even though `sys.boot_completed=1` — just wait a few seconds and retry (see `dev-notes.md`).
 
 ## 3. Make the local Nextcloud reachable from the emulator
 
@@ -85,6 +100,8 @@ The first makes Nextcloud accept requests via `10.0.2.2` at all; the other two f
    - Username: `admin`
    - App password: `admin123` (or a real app password)
 3. Save & start sharing. Group members list should populate; "Create share link" should work and the returned link should open fine in a host browser (per §3's `overwritehost` fix).
+
+Getting an instant, silent `[LocShare] sendPosition error: TypeError: Network request failed` on every request (positions, sendPosition, create-share alike), with nothing useful in `adb logcat` beyond that JS-level message? Check the Server URL you saved — it's easy to type `localhost:8080` out of habit from testing the web app in a host browser, but from inside the emulator that resolves to the emulator's own loopback, where nothing listens. It must be `http://10.0.2.2:8080`. Fix by tapping the gear icon (top-right, in the header — not the floating Expo Tools bubble) → "Yes, reconfigure" → re-enter with `10.0.2.2`.
 
 To get a real invite token/URL for guest testing (§5) or to double check group state:
 
