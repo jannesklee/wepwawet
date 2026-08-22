@@ -19,6 +19,7 @@ import {
   type AppConfig,
   type AuthMode,
 } from './config';
+import { fetchGroupInfo } from './api';
 
 interface Props {
   onSaved: (config: AppConfig) => void;
@@ -34,6 +35,7 @@ const DURATIONS = [
 export default function SetupScreen({ onSaved }: Props) {
   const [mode, setMode] = useState<AuthMode>('nextcloud');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Nextcloud fields
   const [serverUrl, setServerUrl] = useState('');
@@ -53,9 +55,10 @@ export default function SetupScreen({ onSaved }: Props) {
 
   async function handleSave() {
     setSaving(true);
+    setError(null);
     try {
       if (mode === 'nextcloud') {
-        const config = await saveConfig({
+        const candidate: AppConfig = {
           mode: 'nextcloud',
           serverUrl: normalizeUrl(serverUrl),
           username: username.trim(),
@@ -63,7 +66,16 @@ export default function SetupScreen({ onSaved }: Props) {
           guestToken: '',
           guestName: '',
           guestDuration: 0,
-        });
+          isValid: true,
+        };
+        const info = await fetchGroupInfo(candidate);
+        if (!info) {
+          setError(
+            "Couldn't connect. Check the Server URL, username, and app password.",
+          );
+          return;
+        }
+        const config = await saveConfig(candidate);
         onSaved(config);
       } else {
         const parsed = parseInviteUrl(inviteUrl);
@@ -133,6 +145,11 @@ export default function SetupScreen({ onSaved }: Props) {
                   autoCorrect={false}
                   keyboardType="url"
                 />
+                {__DEV__ && (
+                  <Text style={styles.devHint}>
+                    Testing from the Android emulator? Use 10.0.2.2, not localhost — the emulator can't reach the host machine's own localhost.
+                  </Text>
+                )}
               </Field>
               <Field label="Username">
                 <TextInput
@@ -221,6 +238,8 @@ export default function SetupScreen({ onSaved }: Props) {
             </View>
           )}
 
+          {error && <Text style={styles.errorText}>{error}</Text>}
+
           <TouchableOpacity
             style={[styles.saveBtn, (!canSave || saving) && styles.saveBtnDisabled]}
             onPress={handleSave}
@@ -295,6 +314,14 @@ const styles = StyleSheet.create({
   field: { gap: 5 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151' },
   fieldHint: { fontSize: 12, color: '#9ca3af', marginTop: 3 },
+  devHint: { fontSize: 12, color: '#b45309', marginTop: 5 },
+
+  errorText: {
+    fontSize: 13,
+    color: '#dc2626',
+    marginTop: 20,
+    textAlign: 'center',
+  },
 
   input: {
     backgroundColor: '#fff',
