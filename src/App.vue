@@ -2,28 +2,20 @@
 	<NcContent app-name="locshare">
 		<NcAppNavigation>
 			<template #list>
-				<!-- Groups (Mode 1) -->
-				<div class="ls-nav-section">
-					<h3 class="ls-nav-heading">Groups</h3>
-					<p class="ls-share-expiry" style="margin-bottom:6px;">
-						Everyone in a group can see each other's location.
-					</p>
-
-					<div v-for="group in groups" :key="group.id" class="ls-group-block">
-						<div class="ls-group-header">
-							<span class="ls-group-name">{{ group.name }}</span>
-							<label class="ls-group-visible">
-								<input
-									type="checkbox"
-									:checked="group.visible"
-									@change="toggleGroupVisibility(group)" />
-								Visible here
-							</label>
-						</div>
+				<template v-if="openGroup">
+					<!-- Group detail -->
+					<div class="ls-nav-section">
+						<button class="ls-back-link" @click="openGroupId = null">‹ Groups</button>
+					</div>
+					<div class="ls-nav-section">
+						<h3 class="ls-nav-heading">{{ openGroup.name }}</h3>
+						<p class="ls-share-expiry" style="margin-bottom:6px;">
+							{{ openGroup.visible ? "You're visible to this group." : "You're hidden from this group." }}
+						</p>
 
 						<ul class="ls-member-list">
 							<li
-								v-for="member in group.members"
+								v-for="member in openGroup.members"
 								:key="member.userId"
 								class="ls-member-item">
 								<img
@@ -45,22 +37,44 @@
 							</li>
 						</ul>
 
-						<div class="ls-share-url-row">
+						<div class="ls-share-url-row" style="margin-top:10px;">
 							<input
 								class="ls-invite-input"
 								readonly
-								:value="group.inviteUrl"
+								:value="openGroup.inviteUrl"
 								@focus="$event.target.select()" />
 							<NcButton
 								type="tertiary"
-								:aria-label="copiedGroupId === group.id ? 'Copied!' : 'Copy invite link'"
-								@click="copyGroupInvite(group)">
+								:aria-label="copiedGroupId === openGroup.id ? 'Copied!' : 'Copy invite link'"
+								@click="copyGroupInvite(openGroup)">
 								<template #icon>
-									<CheckIcon v-if="copiedGroupId === group.id" :size="18" />
+									<CheckIcon v-if="copiedGroupId === openGroup.id" :size="18" />
 									<ContentCopyIcon v-else :size="18" />
 								</template>
 							</NcButton>
 						</div>
+					</div>
+				</template>
+
+				<template v-else>
+				<!-- Groups overview (Mode 1) -->
+				<div class="ls-nav-section">
+					<h3 class="ls-nav-heading">Groups</h3>
+					<p class="ls-share-expiry" style="margin-bottom:6px;">
+						Everyone in a group can see each other's location.
+					</p>
+
+					<div v-for="group in groups" :key="group.id" class="ls-group-overview-row">
+						<button class="ls-group-name-link" @click="openGroupId = group.id">
+							{{ group.name }} <span class="ls-chevron">›</span>
+						</button>
+						<label class="ls-group-visible">
+							<input
+								type="checkbox"
+								:checked="group.visible"
+								@change="toggleGroupVisibility(group)" />
+							Visible here
+						</label>
 					</div>
 
 					<div class="ls-new-group-row">
@@ -135,6 +149,7 @@
 						</li>
 					</ul>
 				</div>
+				</template>
 			</template>
 		</NcAppNavigation>
 
@@ -175,6 +190,7 @@ export default {
 			wakeLock: null,
 			// groups (Mode 1)
 			groups: [],
+			openGroupId: null,
 			newGroupName: '',
 			creatingGroup: false,
 			copiedGroupId: null,
@@ -512,6 +528,10 @@ export default {
 	},
 
 	computed: {
+		openGroup() {
+			return this.groups.find((g) => g.id === this.openGroupId) || null
+		},
+
 		durationOptions() {
 			return [
 				{ minutes: 15, label: '15 min' },
@@ -623,30 +643,49 @@ export default {
 }
 
 /* Groups */
-.ls-group-block {
-	padding: 10px 0;
+.ls-group-overview-row {
+	padding: 8px 0;
 	border-top: 1px solid var(--color-border, #ededed);
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.ls-group-block:first-child {
-	border-top: none;
-	padding-top: 0;
-}
-
-.ls-group-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
 }
 
-.ls-group-name {
+.ls-group-overview-row:first-child {
+	border-top: none;
+	padding-top: 0;
+}
+
+.ls-group-name-link {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	background: none;
+	border: none;
+	padding: 0;
 	font-size: 13px;
 	font-weight: 600;
 	color: var(--color-text-light, #222);
+	cursor: pointer;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ls-chevron {
+	color: var(--color-text-maxcontrast, #767676);
+}
+
+.ls-back-link {
+	background: none;
+	border: none;
+	padding: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--color-primary, #0082c9);
+	cursor: pointer;
 }
 
 .ls-group-visible {
