@@ -43,6 +43,21 @@ class GroupMemberMapper extends QBMapper {
 		return $this->findEntity($qb);
 	}
 
+	public function deleteByGroupAndUser(int $groupId, string $userId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('group_id', $qb->createNamedParameter($groupId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$qb->executeStatement();
+	}
+
+	public function deleteByGroup(int $groupId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('group_id', $qb->createNamedParameter($groupId, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
+	}
+
 	public function isMember(int $groupId, string $userId): bool {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id')

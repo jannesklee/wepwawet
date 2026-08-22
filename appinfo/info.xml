@@ -17,6 +17,9 @@
     <dependencies>
         <nextcloud min-version="30" max-version="34"/>
     </dependencies>
+    <background-jobs>
+        <job>OCA\LocShare\BackgroundJob\CleanupExpiredGuests</job>
+    </background-jobs>
     <navigations>
         <navigation>
             <id>locshare</id>

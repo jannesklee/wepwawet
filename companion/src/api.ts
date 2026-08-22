@@ -163,6 +163,41 @@ export async function setGroupVisibility(
   }
 }
 
+export async function removeGroupMember(
+  config: AppConfig,
+  groupId: number,
+  userId: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      url(config, `/group/${groupId}/members/${encodeURIComponent(userId)}/remove`),
+      { method: 'POST', headers: headers(config) },
+    );
+    if (!res.ok) console.error('[LocShare] removeGroupMember failed:', res.status);
+    return res.ok;
+  } catch (e) {
+    console.error('[LocShare] removeGroupMember error:', e);
+    return false;
+  }
+}
+
+export async function deleteGroup(
+  config: AppConfig,
+  groupId: number,
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      url(config, `/group/${groupId}/delete`),
+      { method: 'POST', headers: headers(config) },
+    );
+    if (!res.ok) console.error('[LocShare] deleteGroup failed:', res.status);
+    return res.ok;
+  } catch (e) {
+    console.error('[LocShare] deleteGroup error:', e);
+    return false;
+  }
+}
+
 export async function fetchMembers(
   config: AppConfig,
   groupId: number,

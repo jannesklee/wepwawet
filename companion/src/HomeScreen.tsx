@@ -21,6 +21,8 @@ import {
   fetchShares,
   createGroup,
   setGroupVisibility,
+  removeGroupMember,
+  deleteGroup,
   createShare,
   revokeShare,
   stopGuestSharing,
@@ -193,6 +195,40 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
     setNewGroupName('');
   }
 
+  async function handleRemoveMember(group: GroupWithMembers, userId: string) {
+    const ok = await removeGroupMember(config, group.id, userId);
+    if (!ok) return;
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === group.id
+          ? { ...g, members: g.members.filter((m) => m.userId !== userId) }
+          : g,
+      ),
+    );
+  }
+
+  async function handleDeleteGroup(group: GroupWithMembers) {
+    Alert.alert(
+      'Delete group',
+      `Delete "${group.name}"? Everyone in it will lose access, including you.`,
+      [
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const ok = await deleteGroup(config, group.id);
+            if (!ok) return;
+            const updated = groups.filter((g) => g.id !== group.id);
+            setGroups(updated);
+            setOpenGroupId(null);
+            maybeStopSharing(updated, shares);
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }
+
   async function handleCreateShare() {
     const ok = await ensureSharing();
     if (!ok) return;
@@ -258,6 +294,8 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
             copied={copiedGroupId === openGroup.id}
             onCopyInvite={() => handleCopyGroupInvite(openGroup)}
             onBack={() => setOpenGroupId(null)}
+            onRemoveMember={(userId) => handleRemoveMember(openGroup, userId)}
+            onDeleteGroup={() => handleDeleteGroup(openGroup)}
           />
         ) : (
           <>
@@ -445,11 +483,15 @@ function GroupDetail({
   copied,
   onCopyInvite,
   onBack,
+  onRemoveMember,
+  onDeleteGroup,
 }: {
   group: GroupWithMembers;
   copied: boolean;
   onCopyInvite: () => void;
   onBack: () => void;
+  onRemoveMember: (userId: string) => void;
+  onDeleteGroup: () => void;
 }) {
   return (
     <>
@@ -468,7 +510,15 @@ function GroupDetail({
         {group.members.length === 0 ? (
           <Text style={styles.emptyNote}>No positions yet</Text>
         ) : (
-          group.members.map((m) => <MemberRow key={m.userId} member={m} />)
+          group.members.map((m) => (
+            <MemberRow
+              key={m.userId}
+              member={m}
+              onRemove={
+                group.isOwner && !m.isMe ? () => onRemoveMember(m.userId) : undefined
+              }
+            />
+          ))
         )}
 
         <View style={[styles.shareRow, { marginTop: 12 }]}>
@@ -481,6 +531,12 @@ function GroupDetail({
             <Text style={styles.iconText}>{copied ? '✓' : '📋'}</Text>
           </TouchableOpacity>
         </View>
+
+        {group.isOwner && (
+          <TouchableOpacity style={styles.deleteGroupBtn} onPress={onDeleteGroup}>
+            <Text style={styles.deleteGroupBtnText}>Delete group</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </>
   );
@@ -519,7 +575,13 @@ function ShareRow({
 
 // ── MemberRow ─────────────────────────────────────────────────────────────────
 
-function MemberRow({ member }: { member: Member }) {
+function MemberRow({
+  member,
+  onRemove,
+}: {
+  member: Member;
+  onRemove?: () => void;
+}) {
   const nowSec = Math.floor(Date.now() / 1000);
   const stale =
     member.updatedAt !== null && nowSec - member.updatedAt > 300;
@@ -548,6 +610,23 @@ function MemberRow({ member }: { member: Member }) {
         </Text>
       </View>
       <View style={[styles.memberDot, { backgroundColor: dotColor }]} />
+      {onRemove && (
+        <TouchableOpacity
+          style={styles.memberRemoveBtn}
+          onPress={() =>
+            Alert.alert(
+              'Remove member',
+              `Remove ${member.displayName} from this group?`,
+              [
+                { text: 'Remove', style: 'destructive', onPress: onRemove },
+                { text: 'Cancel', style: 'cancel' },
+              ],
+            )
+          }
+        >
+          <Text style={styles.memberRemoveText}>✕</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -722,6 +801,11 @@ const styles = StyleSheet.create({
   memberName: { fontSize: 14, fontWeight: '500', color: '#111' },
   memberSeen: { fontSize: 12, color: '#9ca3af', marginTop: 1 },
   memberDot: { width: 8, height: 8, borderRadius: 4 },
+  memberRemoveBtn: { paddingLeft: 10, paddingVertical: 4 },
+  memberRemoveText: { fontSize: 15, color: '#c1c7cf', fontWeight: '700' },
+
+  deleteGroupBtn: { alignItems: 'center', marginTop: 16, paddingVertical: 6 },
+  deleteGroupBtnText: { fontSize: 13, fontWeight: '600', color: '#dc2626' },
 
   emptyNote: { fontSize: 14, color: '#9ca3af', textAlign: 'center', paddingVertical: 8 },
 

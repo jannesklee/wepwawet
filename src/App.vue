@@ -34,6 +34,15 @@
 									class="ls-member-status"
 									:class="memberStatusClass(member)"
 									:title="memberStatusTitle(member)" />
+								<NcButton
+									v-if="openGroup.isOwner && !member.isMe"
+									type="tertiary"
+									aria-label="Remove member"
+									@click="removeGroupMember(openGroup, member.userId)">
+									<template #icon>
+										<DeleteIcon :size="16" />
+									</template>
+								</NcButton>
 							</li>
 						</ul>
 
@@ -53,6 +62,13 @@
 								</template>
 							</NcButton>
 						</div>
+
+						<button
+							v-if="openGroup.isOwner"
+							class="ls-delete-group-btn"
+							@click="deleteGroup(openGroup)">
+							Delete group
+						</button>
 					</div>
 				</template>
 
@@ -335,6 +351,28 @@ export default {
 				this.fetchPositions()
 			} catch (e) {
 				console.error('Failed to update group visibility', e)
+			}
+		},
+
+		async removeGroupMember(group, userId) {
+			try {
+				await axios.post(
+					generateUrl('/apps/locshare/group/' + group.id + '/members/' + encodeURIComponent(userId) + '/remove'),
+				)
+				group.members = group.members.filter((m) => m.userId !== userId)
+			} catch (e) {
+				console.error('Failed to remove group member', e)
+			}
+		},
+
+		async deleteGroup(group) {
+			if (!confirm(`Delete "${group.name}"? Everyone in it will lose access, including you.`)) return
+			try {
+				await axios.post(generateUrl('/apps/locshare/group/' + group.id + '/delete'))
+				this.groups = this.groups.filter((g) => g.id !== group.id)
+				this.openGroupId = null
+			} catch (e) {
+				console.error('Failed to delete group', e)
 			}
 		},
 
@@ -685,6 +723,18 @@ export default {
 	font-size: 13px;
 	font-weight: 600;
 	color: var(--color-primary, #0082c9);
+	cursor: pointer;
+}
+
+.ls-delete-group-btn {
+	display: block;
+	background: none;
+	border: none;
+	margin: 14px auto 0;
+	padding: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--color-error, #dc2626);
 	cursor: pointer;
 }
 

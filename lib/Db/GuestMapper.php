@@ -50,6 +50,13 @@ class GuestMapper extends QBMapper {
 		$qb->executeStatement();
 	}
 
+	public function deleteByGroup(int $groupId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('group_id', $qb->createNamedParameter($groupId, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
+	}
+
 	public function deleteExpired(): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->delete($this->getTableName())

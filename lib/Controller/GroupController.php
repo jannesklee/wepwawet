@@ -113,6 +113,57 @@ class GroupController extends Controller {
 		return new DataResponse(['visible' => $visible]);
 	}
 
+	/**
+	 * Removes another member from a group the current user owns. The owner
+	 * can't remove themselves this way - use delete() to remove the whole
+	 * group instead.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function removeMember(int $id, string $userId): DataResponse {
+		try {
+			$group = $this->groupMapper->find($id);
+		} catch (DoesNotExistException $e) {
+			return new DataResponse(['error' => 'not_found'], Http::STATUS_NOT_FOUND);
+		}
+
+		if ($group->getOwnerUserId() !== $this->userId) {
+			return new DataResponse(['error' => 'not_owner'], Http::STATUS_FORBIDDEN);
+		}
+		if ($userId === $group->getOwnerUserId()) {
+			return new DataResponse(['error' => 'cannot_remove_owner'], Http::STATUS_BAD_REQUEST);
+		}
+
+		$this->groupMemberMapper->deleteByGroupAndUser($id, $userId);
+
+		return new DataResponse([]);
+	}
+
+	/**
+	 * Deletes a group the current user owns, along with its memberships
+	 * and any guest entries. Doesn't touch any share links (they aren't
+	 * group-scoped).
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function delete(int $id): DataResponse {
+		try {
+			$group = $this->groupMapper->find($id);
+		} catch (DoesNotExistException $e) {
+			return new DataResponse(['error' => 'not_found'], Http::STATUS_NOT_FOUND);
+		}
+
+		if ($group->getOwnerUserId() !== $this->userId) {
+			return new DataResponse(['error' => 'not_owner'], Http::STATUS_FORBIDDEN);
+		}
+
+		$this->groupMemberMapper->deleteByGroup($id);
+		$this->guestMapper->deleteByGroup($id);
+		$this->groupMapper->delete($group);
+
+		return new DataResponse([]);
+	}
+
 	private function formatGroup(Group $group): array {
 		$memberCount = count($this->groupMemberMapper->findByGroup($group->getId()));
 		$visible = true;

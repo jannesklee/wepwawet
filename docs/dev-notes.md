@@ -2,6 +2,22 @@
 
 Debugging notes that aren't obvious from the code itself, kept here so they don't have to be re-discovered. Add to this file as new non-obvious issues get root-caused. See `docs/manual-testing.md` for the step-by-step setup and test workflow these notes support.
 
+## Background job registration silently failed on every request, occasionally as a hard 503
+
+`lib/AppInfo/Application.php`'s `register()` called `$context->registerBackgroundJob(CleanupExpiredGuests::class)` — but `IRegistrationContext` in this Nextcloud version (33.0.0.16, and per the API surface checked in `lib/public/AppFramework/Bootstrap/IRegistrationContext.php`) has no `registerBackgroundJob()` method at all. Background jobs in this version are registered **declaratively in `appinfo/info.xml`** instead (confirmed against core's `apps/files/appinfo/info.xml`, which uses a `<background-jobs><job>...</job></background-jobs>` block), not imperatively in the bootstrap class.
+
+Effect: every single request to any locshare route threw `Error during app service registration: Call to undefined method ...::registerBackgroundJob()` — logged at error level on every page load (visible via `occ background-job:list` never showing `CleanupExpiredGuests` at all, and via a constant stream of identical entries in `data/nextcloud.log`). Nextcloud's `Coordinator` catches per-app registration errors so most requests still succeeded despite the log spam, but the failure was non-deterministic enough to occasionally surface as a genuine `503` on an otherwise-unrelated request (seen while testing the group-removal feature — the request itself was fine, the concurrent registration crash was not). The practical side effect: `CleanupExpiredGuests` (hourly cleanup of expired guests + share links) **never actually ran**, silently, since the app was first built.
+
+Fix: removed the `registerBackgroundJob()` call from `Application.php` and added
+```xml
+<background-jobs>
+    <job>OCA\LocShare\BackgroundJob\CleanupExpiredGuests</job>
+</background-jobs>
+```
+to `appinfo/info.xml`. Verified via `occ app:disable locshare && occ app:enable locshare && occ maintenance:repair`, then confirming (a) `occ background-job:list | grep LocShare` shows the job, and (b) no new `nextcloud.log` entries appear across repeated requests.
+
+If you see `Call to undefined method ...IRegistrationContext@anonymous::registerXxx()` for some *other* registration call in the future, the fix is the same shape: check whether that particular `registerXxx` actually exists on `IRegistrationContext` in the target Nextcloud version before assuming it's the right API — several registration types (background jobs among them) are declared in `info.xml` instead, depending on version.
+
 ## Companion app (React Native) — Android background location
 
 The companion app (`companion/`, added in commit b6d14d0) had several stacked bugs blocking end-to-end testing on the Android emulator, on top of each other, each failing silently or with a misleading symptom. All are now fixed.
