@@ -1,6 +1,6 @@
 # Dev Notes: Known Issues & Fixes
 
-Debugging notes that aren't obvious from the code itself, kept here so they don't have to be re-discovered. Add to this file as new non-obvious issues get root-caused.
+Debugging notes that aren't obvious from the code itself, kept here so they don't have to be re-discovered. Add to this file as new non-obvious issues get root-caused. See `docs/manual-testing.md` for the step-by-step setup and test workflow these notes support.
 
 ## Companion app (React Native) — Android background location
 
