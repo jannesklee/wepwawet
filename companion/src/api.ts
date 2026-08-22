@@ -80,8 +80,10 @@ export async function sendPosition(
       headers: headers(config),
       body: JSON.stringify(body),
     });
+    if (!res.ok) console.error('[LocShare] sendPosition failed:', res.status, endpoint);
     return res.ok;
-  } catch {
+  } catch (e) {
+    console.error('[LocShare] sendPosition error:', e);
     return false;
   }
 }
@@ -94,8 +96,8 @@ export async function stopGuestSharing(config: AppConfig): Promise<void> {
       method: 'POST',
       headers: headers(config),
     });
-  } catch {
-    // best-effort
+  } catch (e) {
+    console.error('[LocShare] stopGuestSharing error:', e);
   }
 }
 
@@ -104,9 +106,13 @@ export async function fetchGroupInfo(
 ): Promise<GroupInfo | null> {
   try {
     const res = await fetch(url(config, '/api/me'), { headers: headers(config) });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[LocShare] fetchGroupInfo failed:', res.status, await res.text());
+      return null;
+    }
     return (await res.json()) as GroupInfo;
-  } catch {
+  } catch (e) {
+    console.error('[LocShare] fetchGroupInfo error:', e);
     return null;
   }
 }
@@ -120,9 +126,13 @@ export async function fetchMembers(
       `${normalizeUrl(config.serverUrl)}/apps/locshare/group/${groupId}/positions`,
       { headers: headers(config) },
     );
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error('[LocShare] fetchMembers failed:', res.status, await res.text());
+      return [];
+    }
     return (await res.json()) as Member[];
-  } catch {
+  } catch (e) {
+    console.error('[LocShare] fetchMembers error:', e);
     return [];
   }
 }
@@ -130,9 +140,13 @@ export async function fetchMembers(
 export async function fetchShares(config: AppConfig): Promise<Share[]> {
   try {
     const res = await fetch(url(config, '/shares'), { headers: headers(config) });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error('[LocShare] fetchShares failed:', res.status, await res.text());
+      return [];
+    }
     return (await res.json()) as Share[];
-  } catch {
+  } catch (e) {
+    console.error('[LocShare] fetchShares error:', e);
     return [];
   }
 }
@@ -146,9 +160,13 @@ export async function createShare(
       url(config, `/share?duration=${durationMinutes}`),
       { method: 'POST', headers: headers(config) },
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[LocShare] createShare failed:', res.status, await res.text());
+      return null;
+    }
     return (await res.json()) as Share;
-  } catch {
+  } catch (e) {
+    console.error('[LocShare] createShare error:', e);
     return null;
   }
 }
@@ -162,8 +180,10 @@ export async function revokeShare(
       method: 'POST',
       headers: headers(config),
     });
+    if (!res.ok) console.error('[LocShare] revokeShare failed:', res.status);
     return res.ok;
-  } catch {
+  } catch (e) {
+    console.error('[LocShare] revokeShare error:', e);
     return false;
   }
 }

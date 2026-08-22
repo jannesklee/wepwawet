@@ -5,14 +5,20 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "ios": {
       "bundleIdentifier": "com.locshare.companion",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "LocShare needs your location to share it with others.",
         "NSLocationAlwaysUsageDescription": "LocShare needs your location in the background to continuously share it.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "LocShare needs your location in the background to continuously share it.",
-        "UIBackgroundModes": ["location", "fetch"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -35,7 +41,8 @@
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }
