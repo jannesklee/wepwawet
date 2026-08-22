@@ -2,6 +2,82 @@
 	<NcContent app-name="locshare">
 		<NcAppNavigation>
 			<template #list>
+				<!-- Groups (Mode 1) -->
+				<div class="ls-nav-section">
+					<h3 class="ls-nav-heading">Groups</h3>
+					<p class="ls-share-expiry" style="margin-bottom:6px;">
+						Everyone in a group can see each other's location.
+					</p>
+
+					<div v-for="group in groups" :key="group.id" class="ls-group-block">
+						<div class="ls-group-header">
+							<span class="ls-group-name">{{ group.name }}</span>
+							<label class="ls-group-visible">
+								<input
+									type="checkbox"
+									:checked="group.visible"
+									@change="toggleGroupVisibility(group)" />
+								Visible here
+							</label>
+						</div>
+
+						<ul class="ls-member-list">
+							<li
+								v-for="member in group.members"
+								:key="member.userId"
+								class="ls-member-item">
+								<img
+									v-if="member.avatarUrl"
+									class="ls-member-avatar"
+									:src="member.avatarUrl"
+									:alt="member.displayName" />
+								<span v-else class="ls-member-avatar ls-member-avatar--initial">
+									{{ member.displayName.charAt(0).toUpperCase() }}
+								</span>
+								<span class="ls-member-name">
+									{{ member.displayName }}
+									<span v-if="member.isMe"> (you)</span>
+								</span>
+								<span
+									class="ls-member-status"
+									:class="memberStatusClass(member)"
+									:title="memberStatusTitle(member)" />
+							</li>
+						</ul>
+
+						<div class="ls-share-url-row">
+							<input
+								class="ls-invite-input"
+								readonly
+								:value="group.inviteUrl"
+								@focus="$event.target.select()" />
+							<NcButton
+								type="tertiary"
+								:aria-label="copiedGroupId === group.id ? 'Copied!' : 'Copy invite link'"
+								@click="copyGroupInvite(group)">
+								<template #icon>
+									<CheckIcon v-if="copiedGroupId === group.id" :size="18" />
+									<ContentCopyIcon v-else :size="18" />
+								</template>
+							</NcButton>
+						</div>
+					</div>
+
+					<div class="ls-new-group-row">
+						<input
+							v-model="newGroupName"
+							class="ls-invite-input"
+							placeholder="New group name"
+							@keyup.enter="createGroup" />
+						<NcButton
+							type="tertiary"
+							:disabled="creatingGroup || !newGroupName.trim()"
+							@click="createGroup">
+							+ Create
+						</NcButton>
+					</div>
+				</div>
+
 				<!-- Share location (Mode 2) -->
 				<div class="ls-nav-section">
 					<h3 class="ls-nav-heading">Share my location</h3>
@@ -59,34 +135,6 @@
 						</li>
 					</ul>
 				</div>
-
-				<!-- Members -->
-				<div class="ls-nav-section">
-					<h3 class="ls-nav-heading">Members</h3>
-					<ul class="ls-member-list">
-						<li
-							v-for="member in members"
-							:key="member.userId"
-							class="ls-member-item">
-							<img
-								v-if="member.avatarUrl"
-								class="ls-member-avatar"
-								:src="member.avatarUrl"
-								:alt="member.displayName" />
-							<span v-else class="ls-member-avatar ls-member-avatar--initial">
-								{{ member.displayName.charAt(0).toUpperCase() }}
-							</span>
-							<span class="ls-member-name">
-								{{ member.displayName }}
-								<span v-if="member.isMe"> (you)</span>
-							</span>
-							<span
-								class="ls-member-status"
-								:class="memberStatusClass(member)"
-								:title="memberStatusTitle(member)" />
-						</li>
-					</ul>
-				</div>
 			</template>
 		</NcAppNavigation>
 
@@ -125,7 +173,12 @@ export default {
 			statusInterval: null,
 			lastPosition: null,
 			wakeLock: null,
-			// share management
+			// groups (Mode 1)
+			groups: [],
+			newGroupName: '',
+			creatingGroup: false,
+			copiedGroupId: null,
+			// share management (Mode 2)
 			shares: [],
 			shareMinutes: 60,
 			creatingShare: false,
@@ -166,9 +219,9 @@ export default {
 			this.acquireWakeLock()
 			document.addEventListener('visibilitychange', this.onVisibilityChange)
 
-			this.fetchPositions()
+			this.fetchGroups().then(() => this.fetchPositions())
 			this.pollInterval = setInterval(() => {
-				this.fetchPositions()
+				this.fetchGroups().then(() => this.fetchPositions())
 				this.fetchShares()
 			}, 15000)
 			this.statusInterval = setInterval(() => {
@@ -229,9 +282,75 @@ export default {
 			}
 		},
 
+		async fetchGroups() {
+			try {
+				const { data } = await axios.get(this.state.groupsUrl)
+				this.groups = data.groups
+			} catch (e) {
+				console.error('Failed to fetch groups', e)
+			}
+		},
+
+		async createGroup() {
+			const name = this.newGroupName.trim()
+			if (!name) return
+			this.creatingGroup = true
+			try {
+				const { data } = await axios.post(
+					generateUrl('/apps/locshare/groups') + '?name=' + encodeURIComponent(name),
+				)
+				data.members = []
+				this.groups.push(data)
+				this.newGroupName = ''
+			} catch (e) {
+				console.error('Failed to create group', e)
+			} finally {
+				this.creatingGroup = false
+			}
+		},
+
+		async toggleGroupVisibility(group) {
+			const next = !group.visible
+			try {
+				await axios.post(
+					generateUrl('/apps/locshare/group/' + group.id + '/visibility') + '?visible=' + (next ? '1' : '0'),
+				)
+				group.visible = next
+				this.fetchPositions()
+			} catch (e) {
+				console.error('Failed to update group visibility', e)
+			}
+		},
+
+		async copyGroupInvite(group) {
+			try {
+				await navigator.clipboard.writeText(group.inviteUrl)
+			} catch {
+				// fallback: not needed for modern browsers
+			}
+			this.copiedGroupId = group.id
+			setTimeout(() => { this.copiedGroupId = null }, 2000)
+		},
+
+		// Merges each group's own member/guest list (kept on group.members for the
+		// per-group sidebar view) into one flat, deduplicated list for the map —
+		// the same person can be visible via more than one group.
 		async fetchPositions() {
 			try {
-				const { data } = await axios.get(this.state.positionsUrl)
+				const results = await Promise.all(
+					this.groups.map((g) => axios.get(g.positionsUrl).then((r) => r.data).catch(() => [])),
+				)
+				const merged = new Map()
+				this.groups.forEach((group, i) => {
+					group.members = results[i]
+					for (const m of results[i]) {
+						const existing = merged.get(m.userId)
+						if (!existing || (!existing.hasPosition && m.hasPosition)) {
+							merged.set(m.userId, m)
+						}
+					}
+				})
+				const data = Array.from(merged.values())
 				this.members = data
 				this.updateMarkers(data)
 			} catch (e) {
@@ -501,6 +620,49 @@ export default {
 	color: var(--color-text-maxcontrast, #767676);
 	margin: 0;
 	padding-left: 2px;
+}
+
+/* Groups */
+.ls-group-block {
+	padding: 10px 0;
+	border-top: 1px solid var(--color-border, #ededed);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.ls-group-block:first-child {
+	border-top: none;
+	padding-top: 0;
+}
+
+.ls-group-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.ls-group-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--color-text-light, #222);
+}
+
+.ls-group-visible {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	color: var(--color-text-maxcontrast, #767676);
+	white-space: nowrap;
+}
+
+.ls-new-group-row {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	margin-top: 4px;
 }
 
 /* Member list */

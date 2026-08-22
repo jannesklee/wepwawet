@@ -21,12 +21,20 @@ export interface Member {
   type: 'user' | 'guest';
 }
 
-export interface GroupInfo {
-  groupId: number;
-  groupToken: string;
+export interface Group {
+  id: number;
+  name: string;
+  token: string;
+  isOwner: boolean;
+  memberCount: number;
+  visible: boolean;
   inviteUrl: string;
   positionsUrl: string;
+}
+
+interface GroupsResponse {
   updateUrl: string;
+  groups: Group[];
 }
 
 function url(config: AppConfig, path: string): string {
@@ -101,19 +109,57 @@ export async function stopGuestSharing(config: AppConfig): Promise<void> {
   }
 }
 
-export async function fetchGroupInfo(
+export async function fetchGroups(
   config: AppConfig,
-): Promise<GroupInfo | null> {
+): Promise<GroupsResponse | null> {
   try {
-    const res = await fetch(url(config, '/api/me'), { headers: headers(config) });
+    const res = await fetch(url(config, '/api/groups'), { headers: headers(config) });
     if (!res.ok) {
-      console.error('[LocShare] fetchGroupInfo failed:', res.status, await res.text());
+      console.error('[LocShare] fetchGroups failed:', res.status, await res.text());
       return null;
     }
-    return (await res.json()) as GroupInfo;
+    return (await res.json()) as GroupsResponse;
   } catch (e) {
-    console.error('[LocShare] fetchGroupInfo error:', e);
+    console.error('[LocShare] fetchGroups error:', e);
     return null;
+  }
+}
+
+export async function createGroup(
+  config: AppConfig,
+  name: string,
+): Promise<Group | null> {
+  try {
+    const res = await fetch(
+      url(config, `/groups?name=${encodeURIComponent(name)}`),
+      { method: 'POST', headers: headers(config) },
+    );
+    if (!res.ok) {
+      console.error('[LocShare] createGroup failed:', res.status, await res.text());
+      return null;
+    }
+    return (await res.json()) as Group;
+  } catch (e) {
+    console.error('[LocShare] createGroup error:', e);
+    return null;
+  }
+}
+
+export async function setGroupVisibility(
+  config: AppConfig,
+  groupId: number,
+  visible: boolean,
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      url(config, `/group/${groupId}/visibility?visible=${visible ? '1' : '0'}`),
+      { method: 'POST', headers: headers(config) },
+    );
+    if (!res.ok) console.error('[LocShare] setGroupVisibility failed:', res.status);
+    return res.ok;
+  } catch (e) {
+    console.error('[LocShare] setGroupVisibility error:', e);
+    return false;
   }
 }
 

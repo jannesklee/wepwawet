@@ -2,6 +2,7 @@
 
 namespace OCA\LocShare\Controller;
 
+use OCA\LocShare\Db\Group;
 use OCA\LocShare\Db\GroupMapper;
 use OCA\LocShare\Db\GroupMember;
 use OCA\LocShare\Db\GroupMemberMapper;
@@ -34,42 +35,104 @@ class GroupController extends Controller {
 	}
 
 	/**
-	 * Returns the current user's group info for the companion app.
-	 * Finds the group without auto-creating one (the web app does that on first login).
+	 * Returns every group the current user owns or has joined, for the
+	 * companion app. The web app fetches the same list client-side.
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function me(): DataResponse {
-		$owned = $this->groupMapper->findByOwner($this->userId);
-		if (count($owned) > 0) {
-			$group = $owned[0];
-		} else {
-			$group = null;
-			foreach ($this->groupMemberMapper->findByUser($this->userId) as $membership) {
-				try {
-					$group = $this->groupMapper->find($membership->getGroupId());
-					break;
-				} catch (DoesNotExistException $e) {
-					continue;
-				}
+	public function list(): DataResponse {
+		$groups = [];
+		$seenIds = [];
+
+		foreach ($this->groupMapper->findByOwner($this->userId) as $group) {
+			$groups[] = $group;
+			$seenIds[$group->getId()] = true;
+		}
+		foreach ($this->groupMemberMapper->findByUser($this->userId) as $membership) {
+			if (isset($seenIds[$membership->getGroupId()])) {
+				continue;
+			}
+			try {
+				$groups[] = $this->groupMapper->find($membership->getGroupId());
+				$seenIds[$membership->getGroupId()] = true;
+			} catch (DoesNotExistException $e) {
+				continue;
 			}
 		}
 
-		if ($group === null) {
-			return new DataResponse(
-				['error' => 'no_group', 'message' => 'Open the LocShare web app first to create your group.'],
-				Http::STATUS_NOT_FOUND,
-			);
+		return new DataResponse([
+			'updateUrl' => $this->urlGenerator->linkToRoute('locshare.position.update'),
+			'groups' => array_map(fn ($group) => $this->formatGroup($group), $groups),
+		]);
+	}
+
+	/**
+	 * Creates a new named group owned by the current user.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function create(string $name = ''): DataResponse {
+		$name = trim($name);
+		if ($name === '') {
+			return new DataResponse(['error' => 'name_required'], Http::STATUS_BAD_REQUEST);
 		}
 
-		return new DataResponse([
-			'groupId'      => $group->getId(),
-			'groupToken'   => $group->getToken(),
+		$group = new Group();
+		$group->setName($name);
+		$group->setOwnerUserId($this->userId);
+		$group->setToken(bin2hex(random_bytes(16)));
+		$group->setCreatedAt(time());
+		$group = $this->groupMapper->insert($group);
+
+		$member = new GroupMember();
+		$member->setGroupId($group->getId());
+		$member->setUserId($this->userId);
+		$member->setJoinedAt(time());
+		$member->setVisible(true);
+		$this->groupMemberMapper->insert($member);
+
+		return new DataResponse($this->formatGroup($group));
+	}
+
+	/**
+	 * Sets whether the current user's position is visible to a specific
+	 * group. Does not affect any other group or share link they have.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function setVisibility(int $id, bool $visible = true): DataResponse {
+		try {
+			$member = $this->groupMemberMapper->findByGroupAndUser($id, $this->userId);
+		} catch (DoesNotExistException $e) {
+			return new DataResponse(['error' => 'not_a_member'], Http::STATUS_FORBIDDEN);
+		}
+
+		$member->setVisible($visible);
+		$this->groupMemberMapper->update($member);
+
+		return new DataResponse(['visible' => $visible]);
+	}
+
+	private function formatGroup(Group $group): array {
+		$memberCount = count($this->groupMemberMapper->findByGroup($group->getId()));
+		$visible = true;
+		try {
+			$visible = $this->groupMemberMapper->findByGroupAndUser($group->getId(), $this->userId)->getVisible();
+		} catch (DoesNotExistException $e) {
+			// Owner not yet in group_members (shouldn't happen, but don't fail the whole list)
+		}
+
+		return [
+			'id'           => $group->getId(),
+			'name'         => $group->getName(),
+			'token'        => $group->getToken(),
+			'isOwner'      => $group->getOwnerUserId() === $this->userId,
+			'memberCount'  => $memberCount,
+			'visible'      => $visible,
 			'inviteUrl'    => rtrim($this->urlGenerator->getAbsoluteURL('/'), '/')
 				. $this->urlGenerator->linkToRoute('locshare.page.join', ['token' => $group->getToken()]),
 			'positionsUrl' => $this->urlGenerator->linkToRoute('locshare.group.positions', ['id' => $group->getId()]),
-			'updateUrl'    => $this->urlGenerator->linkToRoute('locshare.position.update'),
-		]);
+		];
 	}
 
 	/**
@@ -120,7 +183,9 @@ class GroupController extends Controller {
 		foreach ($members as $member) {
 			$uid = $member->getUserId();
 			$user = $this->userManager->get($uid);
-			$pos = $positionMap[$uid] ?? null;
+			// A member can hide their position from this specific group without
+			// affecting any other group or share link they're part of.
+			$pos = $member->getVisible() ? ($positionMap[$uid] ?? null) : null;
 
 			$result[] = [
 				'type' => 'user',

@@ -19,7 +19,7 @@ import {
   type AppConfig,
   type AuthMode,
 } from './config';
-import { fetchGroupInfo } from './api';
+import { fetchGroups } from './api';
 
 interface Props {
   onSaved: (config: AppConfig) => void;
@@ -80,8 +80,8 @@ export default function SetupScreen({ onSaved, initialConfig, onCancel }: Props)
           guestDuration: 0,
           isValid: true,
         };
-        const info = await fetchGroupInfo(candidate);
-        if (!info) {
+        const resp = await fetchGroups(candidate);
+        if (!resp) {
           setError(
             "Couldn't connect. Check the Server URL, username, and app password.",
           );

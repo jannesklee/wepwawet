@@ -14,9 +14,11 @@ return [
 		['name' => 'page#serviceWorker', 'url' => '/sw.js', 'verb' => 'GET'],
 
 		// Group management
-		['name' => 'group#me',        'url' => '/api/me',                'verb' => 'GET'],
-		['name' => 'group#accept',    'url' => '/join/{token}/accept',   'verb' => 'POST'],
-		['name' => 'group#positions', 'url' => '/group/{id}/positions',  'verb' => 'GET'],
+		['name' => 'group#list',          'url' => '/api/groups',            'verb' => 'GET'],
+		['name' => 'group#create',        'url' => '/groups',                'verb' => 'POST'],
+		['name' => 'group#accept',        'url' => '/join/{token}/accept',   'verb' => 'POST'],
+		['name' => 'group#positions',     'url' => '/group/{id}/positions',  'verb' => 'GET'],
+		['name' => 'group#setVisibility', 'url' => '/group/{id}/visibility', 'verb' => 'POST'],
 
 		// Position updates
 		['name' => 'position#update', 'url' => '/position', 'verb' => 'POST'],

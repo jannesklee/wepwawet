@@ -34,6 +34,15 @@ class GroupMemberMapper extends QBMapper {
 		return $this->findEntities($qb);
 	}
 
+	public function findByGroupAndUser(int $groupId, string $userId): GroupMember {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('group_id', $qb->createNamedParameter($groupId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		return $this->findEntity($qb);
+	}
+
 	public function isMember(int $groupId, string $userId): bool {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id')

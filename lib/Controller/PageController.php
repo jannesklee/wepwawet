@@ -49,17 +49,16 @@ class PageController extends Controller {
 		$currentUser = $this->userManager->get($this->userId);
 		$displayName = $currentUser !== null ? $currentUser->getDisplayName() : $this->userId;
 
-		$group = $this->resolveOrCreateGroup($displayName);
+		// Ensures a first-time visitor has at least one group to start with;
+		// the web app fetches the actual (possibly multi-group) list client-side
+		// from GroupController::list() rather than through this initial state.
+		$this->resolveOrCreateGroup($displayName);
 
 		$state = [
 			'currentUserId' => $this->userId,
 			'currentUserDisplayName' => $displayName,
 			'currentUserAvatarUrl' => '/index.php/avatar/' . urlencode($this->userId) . '/64',
-			'groupId' => $group->getId(),
-			'groupToken' => $group->getToken(),
-			'inviteUrl' => rtrim($this->urlGenerator->getAbsoluteURL('/'), '/')
-				. $this->urlGenerator->linkToRoute('locshare.page.join', ['token' => $group->getToken()]),
-			'positionsUrl' => $this->urlGenerator->linkToRoute('locshare.group.positions', ['id' => $group->getId()]),
+			'groupsUrl' => $this->urlGenerator->linkToRoute('locshare.group.list'),
 			'updateUrl' => $this->urlGenerator->linkToRoute('locshare.position.update'),
 			'swUrl' => $this->urlGenerator->linkToRoute('locshare.page.serviceWorker'),
 		];

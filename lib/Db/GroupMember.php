@@ -13,16 +13,20 @@ use OCP\DB\Types;
  * @method void setUserId(string $userId)
  * @method int getJoinedAt()
  * @method void setJoinedAt(int $joinedAt)
+ * @method bool getVisible()
+ * @method void setVisible(bool $visible)
  */
 class GroupMember extends Entity {
 
 	protected $groupId;
 	protected $userId;
 	protected $joinedAt;
+	protected $visible;
 
 	public function __construct() {
 		$this->addType('groupId', Types::INTEGER);
 		$this->addType('userId', Types::STRING);
 		$this->addType('joinedAt', Types::INTEGER);
+		$this->addType('visible', Types::BOOLEAN);
 	}
 }

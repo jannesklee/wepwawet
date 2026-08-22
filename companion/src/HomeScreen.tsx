@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -15,13 +16,15 @@ import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import { type AppConfig } from './config';
 import {
-  fetchGroupInfo,
+  fetchGroups,
   fetchMembers,
   fetchShares,
+  createGroup,
+  setGroupVisibility,
   createShare,
   revokeShare,
   stopGuestSharing,
-  type GroupInfo,
+  type Group,
   type Member,
   type Share,
 } from './api';
@@ -30,6 +33,10 @@ import { startSharing, stopSharing, isSharing } from './locationTask';
 interface Props {
   config: AppConfig;
   onReconfigure: () => void;
+}
+
+interface GroupWithMembers extends Group {
+  members: Member[];
 }
 
 const DURATIONS = [
@@ -42,35 +49,32 @@ const DURATIONS = [
 export default function HomeScreen({ config, onReconfigure }: Props) {
   const [sharing, setSharing] = useState(false);
   const [statusChecked, setStatusChecked] = useState(false);
-  const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
-  const [groupInfoFailed, setGroupInfoFailed] = useState(false);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [groups, setGroups] = useState<GroupWithMembers[]>([]);
+  const [groupsFailed, setGroupsFailed] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [copiedGroupId, setCopiedGroupId] = useState<number | null>(null);
   const [shares, setShares] = useState<Share[]>([]);
   const [shareMinutes, setShareMinutes] = useState(60);
   const [creatingShare, setCreatingShare] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const groupInfoRef = useRef<GroupInfo | null>(null);
+  const groupsRef = useRef<GroupWithMembers[]>([]);
 
   // Keep ref in sync so the poll interval can access it without a stale closure
-  groupInfoRef.current = groupInfo;
+  groupsRef.current = groups;
 
-  const loadGroupInfo = useCallback(async () => {
-    setGroupInfoFailed(false);
-    const info = await fetchGroupInfo(config);
-    if (info) {
-      setGroupInfo(info);
-      fetchMembers(config, info.groupId).then(setMembers);
-    } else {
-      setGroupInfoFailed(true);
+  const loadGroups = useCallback(async () => {
+    const resp = await fetchGroups(config);
+    if (!resp) {
+      if (groupsRef.current.length === 0) setGroupsFailed(true);
+      return;
     }
-  }, [config]);
-
-  const refreshMembers = useCallback(async () => {
-    if (groupInfoRef.current) {
-      const data = await fetchMembers(config, groupInfoRef.current.groupId);
-      setMembers(data);
-    }
+    setGroupsFailed(false);
+    const withMembers = await Promise.all(
+      resp.groups.map(async (g) => ({ ...g, members: await fetchMembers(config, g.id) })),
+    );
+    setGroups(withMembers);
   }, [config]);
 
   const refreshShares = useCallback(async () => {
@@ -87,16 +91,12 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
     });
 
     if (config.mode === 'nextcloud') {
-      loadGroupInfo();
+      loadGroups();
       fetchShares(config).then(setShares);
     }
 
     pollRef.current = setInterval(() => {
-      if (groupInfoRef.current) {
-        refreshMembers();
-      } else if (config.mode === 'nextcloud') {
-        loadGroupInfo();
-      }
+      if (config.mode === 'nextcloud') loadGroups();
       refreshShares();
     }, 15000);
     return () => {
@@ -138,6 +138,32 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
 
     await startSharing();
     setSharing(true);
+  }
+
+  async function handleCopyGroupInvite(group: GroupWithMembers) {
+    await Clipboard.setStringAsync(group.inviteUrl);
+    setCopiedGroupId(group.id);
+    setTimeout(() => setCopiedGroupId(null), 2000);
+  }
+
+  async function handleToggleGroupVisibility(group: GroupWithMembers) {
+    const next = !group.visible;
+    const ok = await setGroupVisibility(config, group.id, next);
+    if (!ok) return;
+    setGroups((prev) => prev.map((g) => (g.id === group.id ? { ...g, visible: next } : g)));
+    const members = await fetchMembers(config, group.id);
+    setGroups((prev) => prev.map((g) => (g.id === group.id ? { ...g, members } : g)));
+  }
+
+  async function handleCreateGroup() {
+    const name = newGroupName.trim();
+    if (!name) return;
+    setCreatingGroup(true);
+    const group = await createGroup(config, name);
+    setCreatingGroup(false);
+    if (!group) return;
+    setGroups((prev) => [...prev, { ...group, members: [] }]);
+    setNewGroupName('');
   }
 
   async function handleCreateShare() {
@@ -223,6 +249,95 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
           </View>
         </View>
 
+        {/* ── Groups (authenticated only) ── */}
+        {config.mode === 'nextcloud' && (
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>Groups</Text>
+            <Text style={styles.sectionNote}>
+              Everyone in a group can see each other's location.
+            </Text>
+
+            {groups.length === 0 && !groupsFailed && (
+              <Text style={styles.emptyNote}>Loading…</Text>
+            )}
+
+            {groups.length === 0 && groupsFailed && (
+              <View style={styles.retryBlock}>
+                <Text style={styles.retryNote}>Couldn't reach the server.</Text>
+                <TouchableOpacity style={styles.retryBtn} onPress={loadGroups}>
+                  <Text style={styles.retryBtnText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {groups.map((group, i) => (
+              <View
+                key={group.id}
+                style={[styles.groupBlock, i > 0 && styles.groupBlockBorder]}
+              >
+                <View style={styles.groupHeader}>
+                  <Text style={styles.groupName}>{group.name}</Text>
+                  <View style={styles.groupVisibleRow}>
+                    <Text style={styles.groupVisibleLabel}>Visible here</Text>
+                    <Switch
+                      value={group.visible}
+                      onValueChange={() => handleToggleGroupVisibility(group)}
+                      trackColor={{ true: PRIMARY, false: '#d1d5db' }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+
+                {group.members.length === 0 ? (
+                  <Text style={styles.emptyNote}>No positions yet</Text>
+                ) : (
+                  group.members.map((m) => <MemberRow key={m.userId} member={m} />)
+                )}
+
+                <View style={styles.shareRow}>
+                  <View style={styles.shareInfo}>
+                    <Text style={styles.shareUrl} numberOfLines={1}>
+                      {group.inviteUrl}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.iconBtn}
+                    onPress={() => handleCopyGroupInvite(group)}
+                  >
+                    <Text style={styles.iconText}>
+                      {copiedGroupId === group.id ? '✓' : '📋'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+
+            <View style={styles.newGroupRow}>
+              <TextInput
+                style={styles.newGroupInput}
+                value={newGroupName}
+                onChangeText={setNewGroupName}
+                placeholder="New group name"
+                placeholderTextColor="#aaa"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.newGroupBtn,
+                  (!newGroupName.trim() || creatingGroup) && styles.createBtnDisabled,
+                ]}
+                onPress={handleCreateGroup}
+                disabled={!newGroupName.trim() || creatingGroup}
+              >
+                {creatingGroup ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.newGroupBtnText}>+ Create</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* ── Share links (authenticated only) ── */}
         {config.mode === 'nextcloud' && (
           <View style={styles.card}>
@@ -280,29 +395,6 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
                   />
                 ))}
               </>
-            )}
-          </View>
-        )}
-
-        {/* ── Group members (authenticated only) ── */}
-        {config.mode === 'nextcloud' && (
-          <View style={styles.card}>
-            <Text style={styles.sectionLabel}>Group members</Text>
-            {groupInfo ? (
-              members.length === 0 ? (
-                <Text style={styles.emptyNote}>No positions yet</Text>
-              ) : (
-                members.map((m) => <MemberRow key={m.userId} member={m} />)
-              )
-            ) : groupInfoFailed ? (
-              <View style={styles.retryBlock}>
-                <Text style={styles.retryNote}>Couldn't reach the server.</Text>
-                <TouchableOpacity style={styles.retryBtn} onPress={loadGroupInfo}>
-                  <Text style={styles.retryBtnText}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.emptyNote}>Loading…</Text>
             )}
           </View>
         )}
@@ -449,6 +541,38 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 14,
   },
+
+  groupBlock: { gap: 8, paddingVertical: 10 },
+  groupBlockBorder: { borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  groupName: { fontSize: 14, fontWeight: '600', color: '#111', flexShrink: 1 },
+  groupVisibleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  groupVisibleLabel: { fontSize: 11, color: '#9ca3af' },
+
+  newGroupRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  newGroupInput: {
+    flex: 1,
+    backgroundColor: '#fafafa',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: '#111',
+  },
+  newGroupBtn: {
+    backgroundColor: PRIMARY,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newGroupBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
 
   durationRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   durBtn: {
