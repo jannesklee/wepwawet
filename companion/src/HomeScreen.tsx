@@ -14,12 +14,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
-import { type AppConfig } from './config';
+import { type AppConfig, parseInviteUrl } from './config';
 import {
   fetchGroups,
   fetchMembers,
   fetchShares,
   createGroup,
+  joinGroup,
   setGroupVisibility,
   removeGroupMember,
   deleteGroup,
@@ -31,6 +32,7 @@ import {
   type Share,
 } from './api';
 import { startSharing, stopSharing, isSharing } from './locationTask';
+import { loadNicknames, setNickname, type Nicknames } from './nicknames';
 
 interface Props {
   config: AppConfig;
@@ -57,6 +59,9 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
   const [newGroupName, setNewGroupName] = useState('');
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [copiedGroupId, setCopiedGroupId] = useState<number | null>(null);
+  const [joinInviteUrl, setJoinInviteUrl] = useState('');
+  const [joiningGroup, setJoiningGroup] = useState(false);
+  const [nicknames, setNicknames] = useState<Nicknames>({});
   const [shares, setShares] = useState<Share[]>([]);
   const [shareMinutes, setShareMinutes] = useState(60);
   const [creatingShare, setCreatingShare] = useState(false);
@@ -96,6 +101,7 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
     if (config.mode === 'nextcloud') {
       loadGroups();
       fetchShares(config).then(setShares);
+      loadNicknames().then(setNicknames);
     }
 
     pollRef.current = setInterval(() => {
@@ -195,6 +201,32 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
     setNewGroupName('');
   }
 
+  async function handleJoinGroup() {
+    const parsed = parseInviteUrl(joinInviteUrl.trim());
+    if (!parsed) {
+      Alert.alert('Invalid link', 'Paste the full invite link you received.');
+      return;
+    }
+    setJoiningGroup(true);
+    const ok = await joinGroup(config, parsed.token);
+    setJoiningGroup(false);
+    if (!ok) {
+      Alert.alert("Couldn't join", 'Check the link and try again.');
+      return;
+    }
+    setJoinInviteUrl('');
+    loadGroups();
+  }
+
+  function displayName(group: { id: number; name: string }): string {
+    return nicknames[group.id] ?? group.name;
+  }
+
+  async function handleSetNickname(groupId: number, nickname: string) {
+    const next = await setNickname(groupId, nickname);
+    setNicknames(next);
+  }
+
   async function handleRemoveMember(group: GroupWithMembers, userId: string) {
     const ok = await removeGroupMember(config, group.id, userId);
     if (!ok) return;
@@ -291,11 +323,13 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
         {openGroup ? (
           <GroupDetail
             group={openGroup}
+            nickname={nicknames[openGroup.id] ?? ''}
             copied={copiedGroupId === openGroup.id}
             onCopyInvite={() => handleCopyGroupInvite(openGroup)}
             onBack={() => setOpenGroupId(null)}
             onRemoveMember={(userId) => handleRemoveMember(openGroup, userId)}
             onDeleteGroup={() => handleDeleteGroup(openGroup)}
+            onSetNickname={(value) => handleSetNickname(openGroup.id, value)}
           />
         ) : (
           <>
@@ -428,7 +462,7 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
                       onPress={() => setOpenGroupId(group.id)}
                     >
                       <Text style={styles.groupName} numberOfLines={1}>
-                        {group.name}
+                        {displayName(group)}
                       </Text>
                       <Text style={styles.chevron}>›</Text>
                     </TouchableOpacity>
@@ -443,6 +477,32 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
                     </View>
                   </View>
                 ))}
+
+                <View style={styles.newGroupRow}>
+                  <TextInput
+                    style={styles.newGroupInput}
+                    value={joinInviteUrl}
+                    onChangeText={setJoinInviteUrl}
+                    placeholder="Paste invite link to join"
+                    placeholderTextColor="#aaa"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.newGroupBtn,
+                      (!joinInviteUrl.trim() || joiningGroup) && styles.createBtnDisabled,
+                    ]}
+                    onPress={handleJoinGroup}
+                    disabled={!joinInviteUrl.trim() || joiningGroup}
+                  >
+                    {joiningGroup ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.newGroupBtnText}>Join</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.newGroupRow}>
                   <TextInput
@@ -480,19 +540,29 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
 
 function GroupDetail({
   group,
+  nickname,
   copied,
   onCopyInvite,
   onBack,
   onRemoveMember,
   onDeleteGroup,
+  onSetNickname,
 }: {
   group: GroupWithMembers;
+  nickname: string;
   copied: boolean;
   onCopyInvite: () => void;
   onBack: () => void;
   onRemoveMember: (userId: string) => void;
   onDeleteGroup: () => void;
+  onSetNickname: (value: string) => void;
 }) {
+  const [nicknameDraft, setNicknameDraft] = useState(nickname);
+
+  useEffect(() => {
+    setNicknameDraft(nickname);
+  }, [group.id, nickname]);
+
   return (
     <>
       <TouchableOpacity style={styles.backRow} onPress={onBack}>
@@ -500,11 +570,23 @@ function GroupDetail({
       </TouchableOpacity>
 
       <View style={styles.card}>
-        <Text style={styles.sectionLabel}>{group.name}</Text>
+        <Text style={styles.sectionLabel}>{nickname || group.name}</Text>
         <Text style={styles.sectionNote}>
           {group.visible
             ? "You're visible to this group."
             : "You're hidden from this group."}
+        </Text>
+
+        <TextInput
+          style={styles.nicknameInput}
+          value={nicknameDraft}
+          onChangeText={setNicknameDraft}
+          onEndEditing={() => onSetNickname(nicknameDraft)}
+          placeholder={group.name}
+          placeholderTextColor="#aaa"
+        />
+        <Text style={[styles.sectionNote, { marginTop: 4 }]}>
+          Your name for this group. Only visible to you.
         </Text>
 
         {group.members.length === 0 ? (
@@ -726,6 +808,18 @@ const styles = StyleSheet.create({
 
   backRow: { paddingVertical: 4, paddingHorizontal: 2 },
   backText: { fontSize: 15, fontWeight: '600', color: PRIMARY },
+
+  nicknameInput: {
+    backgroundColor: '#fafafa',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#111',
+    marginTop: 4,
+  },
 
   newGroupRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   newGroupInput: {

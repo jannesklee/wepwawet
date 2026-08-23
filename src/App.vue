@@ -153,6 +153,20 @@
 
 					<div class="ls-new-group-row">
 						<input
+							v-model="joinInviteUrl"
+							class="ls-invite-input"
+							placeholder="Paste invite link to join"
+							@keyup.enter="joinGroup" />
+						<NcButton
+							type="tertiary"
+							:disabled="joiningGroup || !joinInviteUrl.trim()"
+							@click="joinGroup">
+							Join
+						</NcButton>
+					</div>
+
+					<div class="ls-new-group-row">
+						<input
 							v-model="newGroupName"
 							class="ls-invite-input"
 							placeholder="New group name"
@@ -210,6 +224,8 @@ export default {
 			newGroupName: '',
 			creatingGroup: false,
 			copiedGroupId: null,
+			joinInviteUrl: '',
+			joiningGroup: false,
 			// share management (Mode 2)
 			shares: [],
 			shareMinutes: 60,
@@ -320,6 +336,36 @@ export default {
 				this.groups = data.groups
 			} catch (e) {
 				console.error('Failed to fetch groups', e)
+			}
+		},
+
+		async joinGroup() {
+			const raw = this.joinInviteUrl.trim()
+			if (!raw) return
+			let token = null
+			try {
+				const u = new URL(raw)
+				const parts = u.pathname.split('/').filter(Boolean)
+				const idx = parts.indexOf('join')
+				if (idx >= 0 && idx + 1 < parts.length) token = parts[idx + 1]
+			} catch (e) {
+				// not a valid URL
+			}
+			if (!token) {
+				alert('Paste the full invite link you received.')
+				return
+			}
+			this.joiningGroup = true
+			try {
+				await axios.post(generateUrl('/apps/locshare/join/' + token + '/accept'))
+				this.joinInviteUrl = ''
+				await this.fetchGroups()
+				await this.fetchPositions()
+			} catch (e) {
+				console.error('Failed to join group', e)
+				alert("Couldn't join. Check the link and try again.")
+			} finally {
+				this.joiningGroup = false
 			}
 		},
 

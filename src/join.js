@@ -24,11 +24,59 @@
 			})
 		}
 
-		var GUEST_UPDATE_URL = container.dataset.guestUpdateUrl
+		if (container.dataset.userId) {
+			setupUserInviteFlow(container)
+		} else {
+			setupGuestFlow(container)
+		}
+	})
+
+	// Logged-in Nextcloud user: joining a group is a single, immediate action.
+	// No name to enter (already known), no duration to pick (visibility is a
+	// separate, ongoing choice made later from the main app).
+	function setupUserInviteFlow(container) {
 		var ACCEPT_URL = container.dataset.acceptUrl
-		var LOGGED_IN_USER_ID = container.dataset.userId || null
-		var LOGGED_IN_DISPLAY_NAME = container.dataset.userDisplayName || null
 		var MAIN_URL = container.dataset.mainUrl || null
+
+		var inviteView = document.getElementById('ls-user-invite-view')
+		var joinedView = document.getElementById('ls-user-joined-view')
+		var errorView = document.getElementById('ls-user-error-view')
+		var joinBtn = document.getElementById('ls-join-group-btn')
+		var retryBtn = document.getElementById('ls-user-retry-btn')
+
+		function showView(view) {
+			[inviteView, joinedView, errorView].forEach(function (v) {
+				if (v) v.style.display = 'none'
+			})
+			if (view) view.style.display = 'flex'
+		}
+
+		function join() {
+			if (joinBtn) { joinBtn.disabled = true; joinBtn.textContent = 'Joining…' }
+			fetch(ACCEPT_URL, { method: 'POST' })
+				.then(function (r) {
+					if (!r.ok) throw new Error('accept failed')
+					return r.json()
+				})
+				.then(function () {
+					showView(joinedView)
+					if (MAIN_URL) {
+						setTimeout(function () { window.location.href = MAIN_URL }, 1200)
+					}
+				})
+				.catch(function () {
+					showView(errorView)
+					if (joinBtn) { joinBtn.disabled = false; joinBtn.textContent = 'Join group' }
+				})
+		}
+
+		if (joinBtn) joinBtn.addEventListener('click', join)
+		if (retryBtn) retryBtn.addEventListener('click', join)
+	}
+
+	// Guest: time-boxed sharing under a chosen name, no Nextcloud account.
+	function setupGuestFlow(container) {
+		var GUEST_UPDATE_URL = container.dataset.guestUpdateUrl
 
 		var formView = document.getElementById('ls-form-view')
 		var sharingView = document.getElementById('ls-sharing-view')
@@ -44,13 +92,6 @@
 		var restartBtn = document.getElementById('ls-restart-btn')
 		var retryBtn = document.getElementById('ls-retry-btn')
 		var errorText = document.getElementById('ls-error-text')
-
-		// Pre-fill name for logged-in users
-		if (LOGGED_IN_USER_ID && nameInput) {
-			nameInput.value = LOGGED_IN_DISPLAY_NAME || LOGGED_IN_USER_ID
-			nameInput.readOnly = true
-			nameInput.style.opacity = '0.7'
-		}
 
 		var selectedMinutes = 60
 		var watchId = null
@@ -102,12 +143,12 @@
 				.then(function (r) {
 					if (r.ok && statusText) {
 						statusText.textContent = fakeCity
-							? 'Sending fake position near ' + fakeCity.name + '\u2026'
-							: 'Sending position\u2026'
+							? 'Sending fake position near ' + fakeCity.name + '…'
+							: 'Sending position…'
 					}
 				})
 				.catch(function () {
-					if (statusText) statusText.textContent = 'Failed to send. Retrying\u2026'
+					if (statusText) statusText.textContent = 'Failed to send. Retrying…'
 				})
 		}
 
@@ -150,7 +191,7 @@
 				: null
 
 			showView(sharingView)
-			if (statusText) statusText.textContent = useFake ? 'Starting fake location\u2026' : 'Waiting for GPS fix\u2026'
+			if (statusText) statusText.textContent = useFake ? 'Starting fake location…' : 'Waiting for GPS fix…'
 			if (!expiresAt && expiresText) expiresText.textContent = 'Sharing until you stop'
 
 			if (useFake) {
@@ -192,31 +233,6 @@
 				return
 			}
 			if (nameInput) nameInput.style.borderColor = ''
-
-			// Logged-in Nextcloud user: call accept to join the group, then share via guest endpoint
-			// (accept just registers membership; position is still sent to guestUpdate for simplicity
-			//  since the user may not be in their own Nextcloud session context here)
-			if (LOGGED_IN_USER_ID && !useFake) {
-				showView(sharingView)
-				if (statusText) statusText.textContent = 'Connecting\u2026'
-				fetch(ACCEPT_URL, { method: 'POST' })
-					.then(function (r) { return r.json() })
-					.then(function (data) {
-						if (data.main_url && MAIN_URL) {
-							// Redirect to the main map after joining
-							window.location.href = data.main_url
-						} else {
-							// Fallback: share position as a named user from this page
-							startSharingWithUrl(GUEST_UPDATE_URL, name, false)
-						}
-					})
-					.catch(function () {
-						// Accept failed (not logged in?), share as guest
-						startSharingWithUrl(GUEST_UPDATE_URL, name, useFake)
-					})
-				return
-			}
-
 			startSharingWithUrl(GUEST_UPDATE_URL, name, useFake)
 		}
 
@@ -229,5 +245,5 @@
 			nameInput.addEventListener('input', function () { nameInput.style.borderColor = '' })
 			nameInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') beginSharing(false) })
 		}
-	})
+	}
 }())

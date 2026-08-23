@@ -24,6 +24,33 @@ $swUrl = $_['sw_url'] ?? '';
 	data-main-url="<?= htmlspecialchars($mainUrl, ENT_QUOTES) ?>"
 	<?php endif; ?>>
 
+	<?php if ($userId !== null): ?>
+	<!-- Logged-in Nextcloud user: joining a persistent group is a one-step
+	     action, distinct from the guest's time-boxed sharing flow below. -->
+	<div class="ls-join-card" id="ls-user-invite-view">
+		<div class="ls-join-icon">📍</div>
+		<h1><?= p($ownerDisplayName) ?> invited you to join "<?= p($groupName) ?>"</h1>
+		<p class="ls-join-desc">You'll see everyone in this group on your map. You choose separately, any time, whether to share your own location with them.</p>
+		<button id="ls-join-group-btn" type="button">Join group</button>
+	</div>
+
+	<div class="ls-join-card" id="ls-user-joined-view" style="display:none">
+		<div class="ls-join-icon">✅</div>
+		<h1>You joined "<?= p($groupName) ?>"</h1>
+		<?php if ($mainUrl !== null): ?>
+		<a href="<?= htmlspecialchars($mainUrl, ENT_QUOTES) ?>" class="ls-map-link">Open LocShare →</a>
+		<?php endif; ?>
+	</div>
+
+	<div class="ls-join-card" id="ls-user-error-view" style="display:none">
+		<div class="ls-join-icon">⚠️</div>
+		<h1>Something went wrong</h1>
+		<p class="ls-join-sub">Couldn't join the group. Check your connection and try again.</p>
+		<button id="ls-user-retry-btn" type="button">Try again</button>
+	</div>
+
+	<?php else: ?>
+	<!-- Guest: time-boxed sharing, no Nextcloud account -->
 	<div class="ls-join-card" id="ls-form-view">
 		<div class="ls-join-icon">📍</div>
 		<h1><?= p($ownerDisplayName) ?> wants to share locations with you</h1>
@@ -62,9 +89,6 @@ $swUrl = $_['sw_url'] ?? '';
 		<p class="ls-join-sub" id="ls-status-text">Waiting for GPS fix…</p>
 		<p class="ls-join-note" id="ls-expires-text"></p>
 		<button id="ls-stop-btn" type="button" class="ls-btn-secondary">Stop sharing</button>
-		<?php if ($mainUrl !== null): ?>
-		<a href="<?= htmlspecialchars($mainUrl, ENT_QUOTES) ?>" class="ls-map-link">See everyone on the map →</a>
-		<?php endif; ?>
 	</div>
 
 	<div class="ls-join-card" id="ls-stopped-view" style="display:none">
@@ -72,9 +96,6 @@ $swUrl = $_['sw_url'] ?? '';
 		<h1>Sharing stopped</h1>
 		<p class="ls-join-desc">Your location is no longer being shared.</p>
 		<button id="ls-restart-btn" type="button">Share again</button>
-		<?php if ($mainUrl !== null): ?>
-		<a href="<?= htmlspecialchars($mainUrl, ENT_QUOTES) ?>" class="ls-map-link">See everyone on the map →</a>
-		<?php endif; ?>
 	</div>
 
 	<div class="ls-join-card" id="ls-error-view" style="display:none">
@@ -83,6 +104,7 @@ $swUrl = $_['sw_url'] ?? '';
 		<p class="ls-join-sub" id="ls-error-text"></p>
 		<button id="ls-retry-btn" type="button">Try again</button>
 	</div>
+	<?php endif; ?>
 </div>
 
 <style>

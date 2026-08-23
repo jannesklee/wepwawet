@@ -125,6 +125,23 @@ export async function fetchGroups(
   }
 }
 
+export async function joinGroup(
+  config: AppConfig,
+  token: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      url(config, `/join/${token}/accept`),
+      { method: 'POST', headers: headers(config) },
+    );
+    if (!res.ok) console.error('[LocShare] joinGroup failed:', res.status);
+    return res.ok;
+  } catch (e) {
+    console.error('[LocShare] joinGroup error:', e);
+    return false;
+  }
+}
+
 export async function createGroup(
   config: AppConfig,
   name: string,
