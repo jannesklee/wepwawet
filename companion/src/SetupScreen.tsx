@@ -47,18 +47,12 @@ export default function SetupScreen({ onSaved, initialConfig, onCancel }: Props)
   const [appPassword, setAppPassword] = useState(initialConfig?.appPassword ?? '');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Guest fields
-  const [inviteUrl, setInviteUrl] = useState(
-    initialConfig?.mode === 'guest'
-      ? `${initialConfig.serverUrl}/apps/locshare/join/${initialConfig.guestToken}`
-      : '',
-  );
-  const [guestName, setGuestName] = useState(initialConfig?.guestName ?? '');
-  const [guestDuration, setGuestDuration] = useState(
-    initialConfig?.mode === 'guest' && initialConfig.guestDuration > 0
-      ? initialConfig.guestDuration
-      : 60,
-  );
+  // Guest fields - this form only creates the first joined group; once set
+  // up, additional invite links are added from the Home screen so existing
+  // groups aren't lost.
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [guestName, setGuestName] = useState('');
+  const [guestDuration, setGuestDuration] = useState(60);
 
   const canSave =
     mode === 'nextcloud'
@@ -75,9 +69,7 @@ export default function SetupScreen({ onSaved, initialConfig, onCancel }: Props)
           serverUrl: normalizeUrl(serverUrl),
           username: username.trim(),
           appPassword: appPassword.trim(),
-          guestToken: '',
-          guestName: '',
-          guestDuration: 0,
+          guestLinks: [],
           isValid: true,
         };
         const resp = await fetchGroups(candidate);
@@ -103,9 +95,15 @@ export default function SetupScreen({ onSaved, initialConfig, onCancel }: Props)
           serverUrl: parsed.server,
           username: '',
           appPassword: '',
-          guestToken: parsed.token,
-          guestName: guestName.trim(),
-          guestDuration,
+          guestLinks: [
+            {
+              token: parsed.token,
+              server: parsed.server,
+              name: guestName.trim(),
+              duration: guestDuration,
+              enabled: true,
+            },
+          ],
         });
         onSaved(config);
       }

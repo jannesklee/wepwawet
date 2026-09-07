@@ -4,6 +4,17 @@ const CONFIG_KEY = 'locshare_config';
 
 export type AuthMode = 'nextcloud' | 'guest';
 
+// One joined group in guest mode. A guest can hold several of these at once
+// (one per invite link they've pasted in), each with its own display name
+// and share duration, sent to independently on every location update.
+export interface GuestLink {
+  token: string;
+  server: string;
+  name: string;
+  duration: number; // minutes; 0 = no expiry
+  enabled: boolean;
+}
+
 export interface AppConfig {
   mode: AuthMode;
   serverUrl: string;
@@ -11,9 +22,7 @@ export interface AppConfig {
   username: string;
   appPassword: string;
   // Guest mode
-  guestToken: string;
-  guestName: string;
-  guestDuration: number; // minutes; 0 = no expiry
+  guestLinks: GuestLink[];
   // Derived
   isValid: boolean;
 }
@@ -22,14 +31,22 @@ function isValid(c: Omit<AppConfig, 'isValid'>): boolean {
   if (c.mode === 'nextcloud') {
     return !!(c.serverUrl && c.username && c.appPassword);
   }
-  return !!(c.serverUrl && c.guestToken && c.guestName);
+  return c.guestLinks.length > 0;
+}
+
+// Older stored configs held a single guestToken/guestName/guestDuration
+// instead of guestLinks; default to an empty list so a stale on-device
+// config doesn't crash a raw JSON.parse of SecureStore's contents (both
+// here and in locationTask.ts, which reads the store directly).
+export function normalizeConfig(parsed: Omit<AppConfig, 'isValid'>): AppConfig {
+  const guestLinks = Array.isArray(parsed.guestLinks) ? parsed.guestLinks : [];
+  return { ...parsed, guestLinks, isValid: isValid({ ...parsed, guestLinks }) };
 }
 
 export async function loadConfig(): Promise<AppConfig | null> {
   const raw = await SecureStore.getItemAsync(CONFIG_KEY);
   if (!raw) return null;
-  const parsed = JSON.parse(raw) as Omit<AppConfig, 'isValid'>;
-  return { ...parsed, isValid: isValid(parsed) };
+  return normalizeConfig(JSON.parse(raw) as Omit<AppConfig, 'isValid'>);
 }
 
 export async function saveConfig(

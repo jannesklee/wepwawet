@@ -1,4 +1,4 @@
-import { type AppConfig, basicAuthHeader, normalizeUrl } from './config';
+import { type AppConfig, type GuestLink, basicAuthHeader, normalizeUrl } from './config';
 
 export interface Share {
   id: number;
@@ -52,6 +52,7 @@ function headers(config: AppConfig): HeadersInit {
   return h;
 }
 
+// Nextcloud mode only - config carries the credentials used to authenticate.
 export async function sendPosition(
   config: AppConfig,
   lat: number,
@@ -62,27 +63,8 @@ export async function sendPosition(
   heading: number | null,
 ): Promise<boolean> {
   try {
-    let endpoint: string;
-    let body: Record<string, unknown>;
-
-    if (config.mode === 'nextcloud') {
-      endpoint = url(config, '/position');
-      body = { lat, lon, acc, alt, speed, bearing: heading };
-    } else {
-      endpoint = url(config, `/guest/${config.guestToken}`);
-      body = {
-        name: config.guestName,
-        lat,
-        lon,
-        acc,
-        alt,
-        speed,
-        bearing: heading,
-        timestamp: Math.floor(Date.now() / 1000),
-        ...(config.guestDuration > 0 ? { duration: config.guestDuration } : {}),
-      };
-    }
-
+    const endpoint = url(config, '/position');
+    const body = { lat, lon, acc, alt, speed, bearing: heading };
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: headers(config),
@@ -96,16 +78,57 @@ export async function sendPosition(
   }
 }
 
-export async function stopGuestSharing(config: AppConfig): Promise<void> {
-  if (config.mode !== 'guest') return;
+const guestHeaders: HeadersInit = {
+  'Content-Type': 'application/json',
+  'OCS-APIRequest': 'true',
+};
+
+// Guest mode - one call per joined group, since each carries its own
+// server/token/name and is otherwise independent of the others.
+export async function sendGuestPosition(
+  link: GuestLink,
+  lat: number,
+  lon: number,
+  acc: number | null,
+  alt: number | null,
+  speed: number | null,
+  heading: number | null,
+): Promise<boolean> {
   try {
-    const params = new URLSearchParams({ name: config.guestName, stop: '1' });
-    await fetch(url(config, `/guest/${config.guestToken}?${params}`), {
+    const endpoint = `${normalizeUrl(link.server)}/apps/locshare/guest/${link.token}`;
+    const body = {
+      name: link.name,
+      lat,
+      lon,
+      acc,
+      alt,
+      speed,
+      bearing: heading,
+      timestamp: Math.floor(Date.now() / 1000),
+      ...(link.duration > 0 ? { duration: link.duration } : {}),
+    };
+    const res = await fetch(endpoint, {
       method: 'POST',
-      headers: headers(config),
+      headers: guestHeaders,
+      body: JSON.stringify(body),
     });
+    if (!res.ok) console.error('[LocShare] sendGuestPosition failed:', res.status, endpoint);
+    return res.ok;
   } catch (e) {
-    console.error('[LocShare] stopGuestSharing error:', e);
+    console.error('[LocShare] sendGuestPosition error:', e);
+    return false;
+  }
+}
+
+export async function stopGuestLink(link: GuestLink): Promise<void> {
+  try {
+    const params = new URLSearchParams({ name: link.name, stop: '1' });
+    await fetch(
+      `${normalizeUrl(link.server)}/apps/locshare/guest/${link.token}?${params}`,
+      { method: 'POST', headers: guestHeaders },
+    );
+  } catch (e) {
+    console.error('[LocShare] stopGuestLink error:', e);
   }
 }
 

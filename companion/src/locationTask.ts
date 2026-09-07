@@ -1,8 +1,8 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as SecureStore from 'expo-secure-store';
-import { sendPosition } from './api';
-import { type AppConfig } from './config';
+import { sendPosition, sendGuestPosition } from './api';
+import { type AppConfig, normalizeConfig } from './config';
 
 export const LOCATION_TASK = 'locshare-background-location';
 
@@ -30,18 +30,25 @@ TaskManager.defineTask(
     try {
       const raw = await SecureStore.getItemAsync('locshare_config');
       if (!raw) return;
-      const config = JSON.parse(raw) as AppConfig;
+      const config = normalizeConfig(JSON.parse(raw) as Omit<AppConfig, 'isValid'>);
       if (!config.isValid) return;
 
-      await sendPosition(
-        config,
-        loc.coords.latitude,
-        loc.coords.longitude,
-        loc.coords.accuracy ?? null,
-        loc.coords.altitude ?? null,
-        loc.coords.speed ?? null,
-        loc.coords.heading ?? null,
-      );
+      const lat = loc.coords.latitude;
+      const lon = loc.coords.longitude;
+      const acc = loc.coords.accuracy ?? null;
+      const alt = loc.coords.altitude ?? null;
+      const speed = loc.coords.speed ?? null;
+      const heading = loc.coords.heading ?? null;
+
+      if (config.mode === 'nextcloud') {
+        await sendPosition(config, lat, lon, acc, alt, speed, heading);
+      } else {
+        await Promise.all(
+          config.guestLinks
+            .filter((link) => link.enabled)
+            .map((link) => sendGuestPosition(link, lat, lon, acc, alt, speed, heading)),
+        );
+      }
     } catch (e) {
       console.error('[LocShare] Failed to send position:', e);
     }

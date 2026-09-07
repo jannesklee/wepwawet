@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
-import { type AppConfig, parseInviteUrl } from './config';
+import { type AppConfig, type GuestLink, parseInviteUrl, saveConfig } from './config';
 import {
   fetchGroups,
   fetchMembers,
@@ -26,7 +26,7 @@ import {
   deleteGroup,
   createShare,
   revokeShare,
-  stopGuestSharing,
+  stopGuestLink,
   type Group,
   type Member,
   type Share,
@@ -36,6 +36,7 @@ import { loadNicknames, setNickname, type Nicknames } from './nicknames';
 
 interface Props {
   config: AppConfig;
+  onConfigChange: (config: AppConfig) => void;
   onReconfigure: () => void;
 }
 
@@ -50,7 +51,7 @@ const DURATIONS = [
   { minutes: 0, label: '∞' },
 ] as const;
 
-export default function HomeScreen({ config, onReconfigure }: Props) {
+export default function HomeScreen({ config, onConfigChange, onReconfigure }: Props) {
   const [sharing, setSharing] = useState(false);
   const [statusChecked, setStatusChecked] = useState(false);
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
@@ -66,6 +67,10 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
   const [shareMinutes, setShareMinutes] = useState(60);
   const [creatingShare, setCreatingShare] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [newGuestUrl, setNewGuestUrl] = useState('');
+  const [newGuestName, setNewGuestName] = useState('');
+  const [newGuestDuration, setNewGuestDuration] = useState(60);
+  const [joiningGuestLink, setJoiningGuestLink] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const groupsRef = useRef<GroupWithMembers[]>([]);
 
@@ -159,14 +164,81 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
     }
   }
 
-  async function handleGuestToggle() {
-    if (sharing) {
-      await stopSharing();
-      stopGuestSharing(config);
-      setSharing(false);
+  async function persistGuestLinks(links: GuestLink[]) {
+    const updated = await saveConfig({ ...config, guestLinks: links });
+    onConfigChange(updated);
+    return updated;
+  }
+
+  async function handleAddGuestLink() {
+    const parsed = parseInviteUrl(newGuestUrl.trim());
+    if (!parsed) {
+      Alert.alert('Invalid link', 'Paste the full invite link you received.');
       return;
     }
-    await ensureSharing();
+    const name = newGuestName.trim();
+    if (!name) return;
+    if (config.guestLinks.some((l) => l.token === parsed.token)) {
+      Alert.alert('Already joined', "You're already sharing to this group.");
+      return;
+    }
+
+    setJoiningGuestLink(true);
+    const ok = await ensureSharing();
+    setJoiningGuestLink(false);
+    if (!ok) return;
+
+    const link: GuestLink = {
+      token: parsed.token,
+      server: parsed.server,
+      name,
+      duration: newGuestDuration,
+      enabled: true,
+    };
+    await persistGuestLinks([...config.guestLinks, link]);
+    setNewGuestUrl('');
+    setNewGuestName('');
+  }
+
+  async function handleToggleGuestLink(link: GuestLink) {
+    const next = !link.enabled;
+    if (next) {
+      const ok = await ensureSharing();
+      if (!ok) return;
+    } else {
+      await stopGuestLink(link);
+    }
+    const updatedLinks = config.guestLinks.map((l) =>
+      l.token === link.token ? { ...l, enabled: next } : l,
+    );
+    await persistGuestLinks(updatedLinks);
+    if (!next && !updatedLinks.some((l) => l.enabled) && sharing) {
+      await stopSharing();
+      setSharing(false);
+    }
+  }
+
+  function handleRemoveGuestLink(link: GuestLink) {
+    Alert.alert(
+      'Leave group',
+      `Stop sharing your location to "${link.name}"?`,
+      [
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            await stopGuestLink(link);
+            const updatedLinks = config.guestLinks.filter((l) => l.token !== link.token);
+            await persistGuestLinks(updatedLinks);
+            if (!updatedLinks.some((l) => l.enabled) && sharing) {
+              await stopSharing();
+              setSharing(false);
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
   }
 
   async function handleCopyGroupInvite(group: GroupWithMembers) {
@@ -349,26 +421,116 @@ export default function HomeScreen({ config, onReconfigure }: Props) {
                   <Text style={styles.sharingSubtitle}>
                     {config.mode === 'guest'
                       ? sharing
-                        ? 'Updating every ~5 s in background'
-                        : 'Tap to start background sharing'
+                        ? `Sharing to ${config.guestLinks.filter((l) => l.enabled).length} of ${config.guestLinks.length} group${config.guestLinks.length === 1 ? '' : 's'}, updating every ~5 s`
+                        : 'Join a group below to start sharing'
                       : sharing
                       ? 'Visible via an active group or share link'
                       : 'Turn on a group or create a share link to start'}
                   </Text>
                 </View>
-                {config.mode === 'guest' &&
-                  (statusChecked ? (
-                    <Switch
-                      value={sharing}
-                      onValueChange={handleGuestToggle}
-                      trackColor={{ true: PRIMARY, false: '#d1d5db' }}
-                      thumbColor="#fff"
-                    />
-                  ) : (
-                    <ActivityIndicator color={PRIMARY} />
-                  ))}
+                {config.mode === 'guest' && !statusChecked && (
+                  <ActivityIndicator color={PRIMARY} />
+                )}
               </View>
             </View>
+
+            {/* ── Joined groups (guest mode) ── */}
+            {config.mode === 'guest' && (
+              <View style={styles.card}>
+                <Text style={styles.sectionLabel}>Groups</Text>
+                <Text style={styles.sectionNote}>
+                  Paste another invite link to share your location in more than one group.
+                </Text>
+
+                {config.guestLinks.length === 0 && (
+                  <Text style={styles.emptyNote}>No groups yet</Text>
+                )}
+
+                {config.guestLinks.map((link, i) => (
+                  <View
+                    key={link.token}
+                    style={[styles.groupOverviewRow, i > 0 && styles.groupBlockBorder]}
+                  >
+                    <View style={styles.groupNameTouchable}>
+                      <Text style={styles.groupName} numberOfLines={1}>
+                        {link.name}
+                      </Text>
+                    </View>
+                    <View style={styles.groupVisibleRow}>
+                      <Switch
+                        value={link.enabled}
+                        onValueChange={() => handleToggleGuestLink(link)}
+                        trackColor={{ true: PRIMARY, false: '#d1d5db' }}
+                        thumbColor="#fff"
+                      />
+                      <TouchableOpacity
+                        style={styles.memberRemoveBtn}
+                        onPress={() => handleRemoveGuestLink(link)}
+                      >
+                        <Text style={styles.memberRemoveText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+
+                <View style={[styles.newGroupRow, { marginTop: config.guestLinks.length ? 16 : 12 }]}>
+                  <TextInput
+                    style={styles.newGroupInput}
+                    value={newGuestUrl}
+                    onChangeText={setNewGuestUrl}
+                    placeholder="Paste invite link to join"
+                    placeholderTextColor="#aaa"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+                <View style={styles.newGroupRow}>
+                  <TextInput
+                    style={styles.newGroupInput}
+                    value={newGuestName}
+                    onChangeText={setNewGuestName}
+                    placeholder="Your name in this group"
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+                <View style={styles.durationRow}>
+                  {DURATIONS.map(({ minutes, label }) => (
+                    <TouchableOpacity
+                      key={minutes}
+                      style={[
+                        styles.durBtn,
+                        newGuestDuration === minutes && styles.durBtnActive,
+                      ]}
+                      onPress={() => setNewGuestDuration(minutes)}
+                    >
+                      <Text
+                        style={[
+                          styles.durBtnText,
+                          newGuestDuration === minutes && styles.durBtnTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.createBtn,
+                    (!newGuestUrl.trim() || !newGuestName.trim() || joiningGuestLink) &&
+                      styles.createBtnDisabled,
+                  ]}
+                  onPress={handleAddGuestLink}
+                  disabled={!newGuestUrl.trim() || !newGuestName.trim() || joiningGuestLink}
+                >
+                  {joiningGuestLink ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.createBtnText}>+ Join group</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* ── Share links (authenticated only) ── */}
             {config.mode === 'nextcloud' && (

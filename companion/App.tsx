@@ -34,7 +34,11 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       {config?.isValid && !reconfiguring ? (
-        <HomeScreen config={config} onReconfigure={() => setReconfiguring(true)} />
+        <HomeScreen
+          config={config}
+          onConfigChange={setConfig}
+          onReconfigure={() => setReconfiguring(true)}
+        />
       ) : (
         <SetupScreen
           initialConfig={config}
