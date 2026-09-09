@@ -107,6 +107,7 @@ class PageController extends Controller {
 			'group_name' => $group->getName(),
 			'owner_display_name' => $ownerDisplayName,
 			'guest_update_url' => $this->urlGenerator->linkToRoute('locshare.position.guestUpdate', ['token' => $token]),
+			'guest_positions_url' => $this->urlGenerator->linkToRoute('locshare.group.guestPositions', ['token' => $token]),
 			'accept_url' => $this->urlGenerator->linkToRoute('locshare.group.accept', ['token' => $token]),
 			'main_url' => $this->userId !== null
 				? $this->urlGenerator->linkToRoute('locshare.page.index')

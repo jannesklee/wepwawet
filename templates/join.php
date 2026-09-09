@@ -3,6 +3,7 @@ $appId = OCA\LocShare\AppInfo\Application::APP_ID;
 \OCP\Util::addScript($appId, $appId . '-join');
 
 $guestUpdateUrl = $_['guest_update_url'];
+$guestPositionsUrl = $_['guest_positions_url'];
 $acceptUrl = $_['accept_url'];
 $ownerDisplayName = $_['owner_display_name'];
 $groupName = $_['group_name'];
@@ -15,6 +16,7 @@ $swUrl = $_['sw_url'] ?? '';
 <div id="locshare-join"
 	data-sw-url="<?= htmlspecialchars($swUrl, ENT_QUOTES) ?>"
 	data-guest-update-url="<?= htmlspecialchars($guestUpdateUrl, ENT_QUOTES) ?>"
+	data-guest-positions-url="<?= htmlspecialchars($guestPositionsUrl, ENT_QUOTES) ?>"
 	data-accept-url="<?= htmlspecialchars($acceptUrl, ENT_QUOTES) ?>"
 	<?php if ($userId !== null): ?>
 	data-user-id="<?= htmlspecialchars($userId, ENT_QUOTES) ?>"
@@ -88,6 +90,7 @@ $swUrl = $_['sw_url'] ?? '';
 		<h1>Sharing your location</h1>
 		<p class="ls-join-sub" id="ls-status-text">Waiting for GPS fix…</p>
 		<p class="ls-join-note" id="ls-expires-text"></p>
+		<div id="ls-guest-map"></div>
 		<button id="ls-stop-btn" type="button" class="ls-btn-secondary">Stop sharing</button>
 	</div>
 
@@ -125,28 +128,33 @@ $swUrl = $_['sw_url'] ?? '';
 	align-items: center;
 	gap: 16px;
 	text-align: center;
+	background: var(--color-main-background, #fff);
+	border-radius: var(--border-radius-container-large, 16px);
+	padding: 32px 40px;
+	box-sizing: border-box;
+	box-shadow: 0 1px 10px var(--color-box-shadow, rgba(0, 0, 0, .1));
 }
 
 .ls-join-icon { font-size: 56px; line-height: 1; }
 
 .ls-join-card h1 {
-	font-size: 1.35rem;
+	font-size: 22px;
 	font-weight: 700;
 	color: var(--color-main-text, #222);
 	margin: 0;
 	line-height: 1.4;
 }
 
-.ls-join-sub { color: var(--color-text-maxcontrast, #666); margin: 0; font-size: 0.95rem; font-weight: 600; }
-.ls-join-desc { color: var(--color-text-maxcontrast, #666); margin: 0; font-size: 0.9rem; line-height: 1.5; }
-.ls-join-note { color: var(--color-text-maxcontrast, #999); font-size: 0.85rem; margin: 0; line-height: 1.5; }
+.ls-join-sub { color: var(--color-text-maxcontrast, #767676); margin: 0; font-size: 14px; font-weight: 600; }
+.ls-join-desc { color: var(--color-text-maxcontrast, #767676); margin: 0; font-size: 14px; line-height: 1.5; }
+.ls-join-note { color: var(--color-text-maxcontrast, #767676); font-size: 13px; margin: 0; line-height: 1.5; }
 
 #ls-name-input {
 	width: 100%;
 	padding: 14px 16px;
-	font-size: 1rem;
+	font-size: 15px;
 	border: 2px solid var(--color-border, #ddd);
-	border-radius: var(--border-radius-large, 12px);
+	border-radius: var(--border-radius-element, 8px);
 	outline: none;
 	background: var(--color-main-background, #fff);
 	color: var(--color-main-text, #222);
@@ -156,15 +164,15 @@ $swUrl = $_['sw_url'] ?? '';
 #ls-name-input:focus { border-color: var(--color-primary, #0082c9); }
 
 .ls-duration-group { width: 100%; display: flex; flex-direction: column; gap: 10px; }
-.ls-duration-label { margin: 0; font-size: 0.85rem; color: var(--color-text-maxcontrast, #666); text-align: left; }
+.ls-duration-label { margin: 0; font-size: 13px; color: var(--color-text-maxcontrast, #767676); text-align: left; }
 .ls-duration-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 
 .ls-duration-btn {
 	padding: 10px 4px;
-	font-size: 0.85rem;
+	font-size: 13px;
 	font-weight: 600;
 	border: 2px solid var(--color-border, #ddd);
-	border-radius: var(--border-radius-large, 12px);
+	border-radius: var(--border-radius-element, 8px);
 	background: var(--color-main-background, #fff);
 	color: var(--color-main-text, #222);
 	cursor: pointer;
@@ -173,11 +181,11 @@ $swUrl = $_['sw_url'] ?? '';
 
 #ls-start-btn, #ls-stop-btn, #ls-restart-btn, #ls-retry-btn {
 	width: 100%;
-	padding: 16px;
-	font-size: 1rem;
+	padding: 13px 16px;
+	font-size: 15px;
 	font-weight: 600;
 	border: none;
-	border-radius: var(--border-radius-large, 12px);
+	border-radius: var(--border-radius-element, 8px);
 	background: var(--color-primary, #0082c9);
 	color: var(--color-primary-text, #fff);
 	cursor: pointer;
@@ -191,7 +199,7 @@ $swUrl = $_['sw_url'] ?? '';
 }
 
 .ls-map-link {
-	font-size: 0.9rem;
+	font-size: 14px;
 	font-weight: 600;
 	color: var(--color-primary, #0082c9);
 	text-decoration: none;
@@ -226,8 +234,44 @@ $swUrl = $_['sw_url'] ?? '';
 }
 .ls-pulse-dot::after { animation-delay: 1s; }
 
+#ls-guest-map {
+	width: 100%;
+	height: 220px;
+	border-radius: var(--border-radius-element, 8px);
+	overflow: hidden;
+	background: var(--color-background-dark, #f0f0f0);
+}
+
+#ls-guest-map .ls-guest-marker {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	border: 2px solid #fff;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, .4);
+	background: var(--color-primary, #0082c9);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+#ls-guest-map .ls-guest-marker--me {
+	border-color: var(--color-primary, #0082c9);
+	border-width: 3px;
+}
+
+#ls-guest-map .ls-guest-marker img { width: 100%; height: 100%; object-fit: cover; }
+
 @keyframes ls-pulse {
 	0%   { transform: scale(1); opacity: 0.4; }
 	100% { transform: scale(4.5); opacity: 0; }
+}
+
+@media (max-width: 480px) {
+	#locshare-join { padding: 16px; }
+	.ls-join-card { padding: 28px 20px; }
 }
 </style>

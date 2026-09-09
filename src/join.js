@@ -1,4 +1,7 @@
 /* eslint-disable */
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+
 ;(function () {
 	'use strict'
 
@@ -77,6 +80,7 @@
 	// Guest: time-boxed sharing under a chosen name, no Nextcloud account.
 	function setupGuestFlow(container) {
 		var GUEST_UPDATE_URL = container.dataset.guestUpdateUrl
+		var GUEST_POSITIONS_URL = container.dataset.guestPositionsUrl
 
 		var formView = document.getElementById('ls-form-view')
 		var sharingView = document.getElementById('ls-sharing-view')
@@ -101,6 +105,9 @@
 		var fakeCity = null
 		var fakeLat, fakeLon
 		var currentName = null
+		var map = null
+		var mapMarkers = {}
+		var mapPollTimer = null
 
 		var style = getComputedStyle(document.documentElement)
 		var primaryColor = style.getPropertyValue('--color-primary').trim() || '#0082c9'
@@ -167,7 +174,124 @@
 				: 'Stops in ' + (m + 1) + ' min'
 		}
 
+		function initMap() {
+			if (map) return
+			var mapEl = document.getElementById('ls-guest-map')
+			if (!mapEl || !GUEST_POSITIONS_URL) return
+			map = new maplibregl.Map({
+				container: mapEl,
+				style: {
+					version: 8,
+					sources: {
+						osm: {
+							type: 'raster',
+							tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+							tileSize: 256,
+							attribution: '© OpenStreetMap contributors',
+						},
+					},
+					layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+				},
+				center: [0, 20],
+				zoom: 2,
+			})
+		}
+
+		function createGuestMarkerEl(member) {
+			var el = document.createElement('div')
+			el.className = 'ls-guest-marker' + (member.isMe ? ' ls-guest-marker--me' : '')
+			if (member.avatarUrl) {
+				var img = document.createElement('img')
+				img.src = member.avatarUrl
+				img.alt = member.displayName
+				el.appendChild(img)
+			} else {
+				el.textContent = member.displayName.charAt(0).toUpperCase()
+			}
+			return el
+		}
+
+		function buildGuestPopupEl(member) {
+			var wrap = document.createElement('div')
+			wrap.style.fontSize = '13px'
+			wrap.style.fontWeight = '600'
+			wrap.textContent = member.displayName + (member.isMe ? ' (you)' : '')
+			return wrap
+		}
+
+		function fitMapBounds(members) {
+			if (!map || members.length === 0) return
+			if (members.length === 1) {
+				map.flyTo({ center: [members[0].lon, members[0].lat], zoom: 13 })
+				return
+			}
+			var bounds = new maplibregl.LngLatBounds()
+			members.forEach(function (m) { bounds.extend([m.lon, m.lat]) })
+			map.fitBounds(bounds, { padding: 50, maxZoom: 15 })
+		}
+
+		function updateGuestMarkers(members) {
+			if (!map) return
+			var seen = {}
+			members.forEach(function (member) {
+				if (!member.hasPosition) return
+				seen[member.userId] = true
+				if (mapMarkers[member.userId]) {
+					mapMarkers[member.userId].setLngLat([member.lon, member.lat])
+				} else {
+					var popup = new maplibregl.Popup({ offset: 24, maxWidth: 'none' })
+						.setDOMContent(buildGuestPopupEl(member))
+					mapMarkers[member.userId] = new maplibregl.Marker({ element: createGuestMarkerEl(member) })
+						.setLngLat([member.lon, member.lat])
+						.setPopup(popup)
+						.addTo(map)
+				}
+			})
+			Object.keys(mapMarkers).forEach(function (userId) {
+				if (!seen[userId]) {
+					mapMarkers[userId].remove()
+					delete mapMarkers[userId]
+				}
+			})
+			fitMapBounds(members.filter(function (m) { return m.hasPosition }))
+		}
+
+		function fetchGuestPositions() {
+			if (!GUEST_POSITIONS_URL || !currentName) return
+			var params = new URLSearchParams({ name: currentName })
+			fetch(GUEST_POSITIONS_URL + '?' + params.toString())
+				.then(function (r) { return r.ok ? r.json() : [] })
+				.then(function (data) { updateGuestMarkers(data) })
+				.catch(function () { /* keep last-known markers on a transient failure */ })
+		}
+
+		function startGuestMap() {
+			if (!GUEST_POSITIONS_URL) return
+			if (!map) {
+				// The sharing view has just been made visible - MapLibre needs the
+				// container to already have layout size, so wait a frame.
+				requestAnimationFrame(function () {
+					initMap()
+					fetchGuestPositions()
+				})
+			} else {
+				map.resize()
+				fetchGuestPositions()
+			}
+			if (mapPollTimer === null) {
+				mapPollTimer = setInterval(fetchGuestPositions, 10000)
+			}
+		}
+
+		function stopGuestMap() {
+			if (mapPollTimer !== null) {
+				clearInterval(mapPollTimer)
+				mapPollTimer = null
+			}
+		}
+
 		function stopSharing(showStopped) {
+			stopGuestMap()
 			if (watchId !== null) {
 				fakeMode ? clearInterval(watchId) : navigator.geolocation.clearWatch(watchId)
 				watchId = null
@@ -193,6 +317,7 @@
 			showView(sharingView)
 			if (statusText) statusText.textContent = useFake ? 'Starting fake location…' : 'Waiting for GPS fix…'
 			if (!expiresAt && expiresText) expiresText.textContent = 'Sharing until you stop'
+			startGuestMap()
 
 			if (useFake) {
 				fakeCity = FAKE_CITIES[Math.floor(Math.random() * FAKE_CITIES.length)]

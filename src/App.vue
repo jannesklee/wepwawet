@@ -11,6 +11,7 @@
 						<h3 class="ls-nav-heading">{{ openGroup.name }}</h3>
 						<p class="ls-share-expiry" style="margin-bottom:6px;">
 							{{ openGroup.visible ? "You're visible to this group." : "You're hidden from this group." }}
+							Showing only this group on the map.
 						</p>
 
 						<ul class="ls-member-list">
@@ -214,6 +215,10 @@ export default {
 			heartbeatInterval: null,
 			markers: {},
 			members: [],
+			// userId -> [{ id, name }] for every one of *my* groups that member is
+			// visible via - always the full cross-group picture, independent of
+			// which single group (if any) is currently narrowing the map.
+			memberGroupsByUser: {},
 			nowTs: Math.floor(Date.now() / 1000),
 			statusInterval: null,
 			lastPosition: null,
@@ -441,6 +446,7 @@ export default {
 					this.groups.map((g) => axios.get(g.positionsUrl).then((r) => r.data).catch(() => [])),
 				)
 				const merged = new Map()
+				const groupsByUser = {}
 				this.groups.forEach((group, i) => {
 					group.members = results[i]
 					for (const m of results[i]) {
@@ -448,11 +454,14 @@ export default {
 						if (!existing || (!existing.hasPosition && m.hasPosition)) {
 							merged.set(m.userId, m)
 						}
+						if (!groupsByUser[m.userId]) groupsByUser[m.userId] = []
+						groupsByUser[m.userId].push({ id: group.id, name: group.name })
 					}
 				})
+				this.memberGroupsByUser = groupsByUser
 				const data = Array.from(merged.values())
 				this.members = data
-				this.updateMarkers(data)
+				this.updateMarkers(this.mapMembers)
 			} catch (e) {
 				console.error('Failed to fetch positions', e)
 			}
@@ -467,16 +476,17 @@ export default {
 				seen.add(member.userId)
 
 				if (this.markers[member.userId]) {
-					this.markers[member.userId].setLngLat([member.lon, member.lat])
-					this.markers[member.userId].getElement()
-						.classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
+					const marker = this.markers[member.userId]
+					marker.setLngLat([member.lon, member.lat])
+					marker.getElement().classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
+					marker.getPopup()?.setDOMContent(this.buildPopupContent(member))
 				} else {
 					const el = this.createMarkerEl(member)
 					el.classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
 					this.markers[member.userId] = new maplibregl.Marker({ element: el })
 						.setLngLat([member.lon, member.lat])
 						.setPopup(new maplibregl.Popup({ offset: 28, maxWidth: 'none' })
-							.setHTML(this.buildPopupHtml(member)))
+							.setDOMContent(this.buildPopupContent(member)))
 						.addTo(this.map)
 				}
 			}
@@ -530,21 +540,73 @@ export default {
 			return el
 		},
 
-		buildPopupHtml(member) {
-			const avatar = member.avatarUrl
-				? `<img src="${member.avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" />`
-				: `<span style="width:32px;height:32px;border-radius:50%;background:#0082c9;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${member.displayName.charAt(0).toUpperCase()}</span>`
-			const updated = member.updatedAt
-				? new Date(member.updatedAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-				: null
-			return `<div style="display:flex;align-items:center;gap:10px;padding:4px 2px;font-family:sans-serif;">
-				${avatar}
-				<div style="display:flex;flex-direction:column;gap:2px;">
-					<span style="font-size:13px;font-weight:600;color:#222;white-space:nowrap;">${member.displayName}</span>
-					${updated ? `<span style="font-size:11px;color:#767676;">Updated ${updated}</span>` : ''}
-					${member.acc ? `<span style="font-size:11px;color:#767676;">±${Math.round(member.acc)} m</span>` : ''}
-				</div>
-			</div>`
+		// Built as real DOM nodes (not an HTML string) so the per-group "jump to
+		// this group" chips can carry real click listeners - popups persist their
+		// content across setDOMContent() calls, so this is safe to rebuild on
+		// every poll to keep the timestamp/accuracy/group list current.
+		buildPopupContent(member) {
+			const wrap = document.createElement('div')
+			wrap.className = 'ls-popup'
+
+			const row = document.createElement('div')
+			row.className = 'ls-popup-row'
+
+			if (member.avatarUrl) {
+				const img = document.createElement('img')
+				img.className = 'ls-popup-avatar'
+				img.src = member.avatarUrl
+				img.alt = member.displayName
+				row.appendChild(img)
+			} else {
+				const initial = document.createElement('span')
+				initial.className = 'ls-popup-avatar ls-popup-avatar--initial'
+				initial.textContent = member.displayName.charAt(0).toUpperCase()
+				row.appendChild(initial)
+			}
+
+			const info = document.createElement('div')
+			info.className = 'ls-popup-info'
+
+			const name = document.createElement('span')
+			name.className = 'ls-popup-name'
+			name.textContent = member.displayName
+			info.appendChild(name)
+
+			if (member.updatedAt) {
+				const updated = document.createElement('span')
+				updated.className = 'ls-popup-meta'
+				updated.textContent = `Updated ${new Date(member.updatedAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+				info.appendChild(updated)
+			}
+			if (member.acc) {
+				const acc = document.createElement('span')
+				acc.className = 'ls-popup-meta'
+				acc.textContent = `±${Math.round(member.acc)} m`
+				info.appendChild(acc)
+			}
+
+			row.appendChild(info)
+			wrap.appendChild(row)
+
+			const memberGroups = this.memberGroupsByUser[member.userId] ?? []
+			if (memberGroups.length > 0) {
+				const groupRow = document.createElement('div')
+				groupRow.className = 'ls-popup-groups'
+				memberGroups.forEach((g) => {
+					const chip = document.createElement('button')
+					chip.type = 'button'
+					chip.className = 'ls-popup-group-chip'
+					chip.textContent = g.name
+					chip.addEventListener('click', () => {
+						this.openGroupId = g.id
+						this.markers[member.userId]?.getPopup()?.remove()
+					})
+					groupRow.appendChild(chip)
+				})
+				wrap.appendChild(groupRow)
+			}
+
+			return wrap
 		},
 
 		fitBounds(members) {
@@ -616,6 +678,12 @@ export default {
 			return this.groups.find((g) => g.id === this.openGroupId) || null
 		},
 
+		// The map shows just one group's people while its detail view is open,
+		// and everyone across all groups (deduplicated) otherwise.
+		mapMembers() {
+			return this.openGroup ? this.openGroup.members : this.members
+		},
+
 		durationOptions() {
 			return [
 				{ minutes: 15, label: '15 min' },
@@ -623,6 +691,14 @@ export default {
 				{ minutes: 240, label: '4 hr' },
 				{ minutes: 0, label: '∞' },
 			]
+		},
+	},
+
+	watch: {
+		// Re-render markers immediately when switching in/out of a group's
+		// detail view, instead of waiting for the next 15s poll.
+		openGroupId() {
+			this.updateMarkers(this.mapMembers)
 		},
 	},
 }
@@ -869,6 +945,74 @@ export default {
 	box-shadow: 0 2px 8px rgba(0,0,0,.2) !important;
 	font-size: inherit !important;
 	line-height: inherit !important;
+}
+
+.ls-popup-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 4px 2px;
+}
+
+.ls-popup-avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+.ls-popup-avatar--initial {
+	background: var(--color-primary, #0082c9);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ls-popup-info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.ls-popup-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--color-main-text, #222);
+	white-space: nowrap;
+}
+
+.ls-popup-meta {
+	font-size: 11px;
+	color: var(--color-text-maxcontrast, #767676);
+}
+
+.ls-popup-groups {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 0 2px 2px;
+	max-width: 220px;
+}
+
+.ls-popup-group-chip {
+	font-size: 11px;
+	font-weight: 600;
+	padding: 3px 8px;
+	border: none;
+	border-radius: var(--border-radius-pill, 100px);
+	background: var(--color-primary-light, #e3f0f9);
+	color: var(--color-primary, #0082c9);
+	cursor: pointer;
+}
+
+.ls-popup-group-chip:hover {
+	background: var(--color-primary, #0082c9);
+	color: var(--color-primary-text, #fff);
 }
 
 /* Map markers */

@@ -13,6 +13,7 @@ use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -221,7 +222,37 @@ class GroupController extends Controller {
 			return new DataResponse(['error' => 'not_a_member'], Http::STATUS_FORBIDDEN);
 		}
 
-		$members = $this->groupMemberMapper->findByGroup($id);
+		return new DataResponse($this->buildPositions($id, $this->userId, null));
+	}
+
+	/**
+	 * Same as positions(), but for an unauthenticated guest identified by the
+	 * group's invite token instead of a Nextcloud session - the token is the
+	 * same trust boundary already used by PositionController::guestUpdate().
+	 * The name param (if it matches an active guest) marks that entry as "me".
+	 */
+	#[PublicPage]
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function guestPositions(string $token, string $name = ''): DataResponse {
+		try {
+			$group = $this->groupMapper->findByToken($token);
+		} catch (DoesNotExistException $e) {
+			return new DataResponse(['error' => 'not_found'], Http::STATUS_NOT_FOUND);
+		}
+
+		$cleanName = mb_substr(trim($name), 0, 64);
+
+		return new DataResponse($this->buildPositions($group->getId(), null, $cleanName));
+	}
+
+	/**
+	 * Shared by positions() and guestPositions(). Exactly one of $forUserId /
+	 * $forGuestName should be non-empty - it's used only to flag which entry
+	 * in the result is "me" for the caller.
+	 */
+	private function buildPositions(int $groupId, ?string $forUserId, ?string $forGuestName): array {
+		$members = $this->groupMemberMapper->findByGroup($groupId);
 		$userIds = array_map(fn (GroupMember $m) => $m->getUserId(), $members);
 
 		$positions = $this->positionMapper->findByUserIds($userIds);
@@ -243,7 +274,7 @@ class GroupController extends Controller {
 				'userId' => $uid,
 				'displayName' => $user?->getDisplayName() ?? $uid,
 				'avatarUrl' => '/index.php/avatar/' . urlencode($uid) . '/64',
-				'isMe' => $uid === $this->userId,
+				'isMe' => $forUserId !== null && $uid === $forUserId,
 				'lat' => $pos?->getLat(),
 				'lon' => $pos?->getLon(),
 				'acc' => $pos?->getAcc(),
@@ -253,7 +284,7 @@ class GroupController extends Controller {
 		}
 
 		// Active guests
-		foreach ($this->guestMapper->findActiveByGroup($id) as $guest) {
+		foreach ($this->guestMapper->findActiveByGroup($groupId) as $guest) {
 			if ($guest->getLat() === null) {
 				continue;
 			}
@@ -262,7 +293,7 @@ class GroupController extends Controller {
 				'userId' => 'guest_' . $guest->getId(),
 				'displayName' => $guest->getName(),
 				'avatarUrl' => null,
-				'isMe' => false,
+				'isMe' => $forGuestName !== null && $forGuestName !== '' && $guest->getName() === $forGuestName,
 				'lat' => $guest->getLat(),
 				'lon' => $guest->getLon(),
 				'acc' => $guest->getAcc(),
@@ -271,6 +302,6 @@ class GroupController extends Controller {
 			];
 		}
 
-		return new DataResponse($result);
+		return $result;
 	}
 }

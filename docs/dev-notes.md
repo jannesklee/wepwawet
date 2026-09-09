@@ -18,6 +18,24 @@ to `appinfo/info.xml`. Verified via `occ app:disable locshare && occ app:enable 
 
 If you see `Call to undefined method ...IRegistrationContext@anonymous::registerXxx()` for some *other* registration call in the future, the fix is the same shape: check whether that particular `registerXxx` actually exists on `IRegistrationContext` in the target Nextcloud version before assuming it's the right API — several registration types (background jobs among them) are declared in `info.xml` instead, depending on version.
 
+## Actual Nextcloud theme CSS variable values (for styling standalone public pages like `templates/join.php`)
+
+`grep`-ing static core CSS for `--border-radius`/`--font-size` definitions turns up nothing — they're generated server-side per request, not in a static file. To find real values, fetch the live theming endpoint instead: `curl http://localhost:8080/apps/theming/theme/default.css?plain=1`. On this dev instance (NC 33.0.0.16, default theme) the values that matter for `templates/join.php`/`src/Viewer.vue`-style standalone pages are:
+
+- `--border-radius-large` is an alias for `--border-radius-element`, which is **8px**, not the `12px` fallback `templates/join.php` used to assume before the 2026-09-09 restyle. The fallback only matters if the page renders with no NC theme CSS loaded at all (shouldn't happen for `PublicTemplateResponse` pages), but keep fallbacks honest anyway.
+- `--border-radius-container-large` is **16px** — this is what `src/Viewer.vue`'s hardcoded `border-radius: 16px` on `.ls-viewer-overlay-card` actually matches; use the var (with `16px` fallback) instead of hardcoding it in new code.
+- `--font-size-small` is **13px**. There's no generic `--font-size-normal`; the app's own convention (see `App.vue`, `Viewer.vue`) is to hardcode body/label text in the 13-15px range in px, not rem — `rem`-based sizing in `join.php` was inconsistent with this and got converted.
+- `--clickable-area-large` is **48px**, `--default-clickable-area` (what unstyled `NcButton` uses) is **34px**. A full-width `padding: 13px 16px` at `font-size: 15px` lands close to the 48px target, appropriate for a mobile-first guest CTA even though it's taller than the app's default in-app buttons.
+- `--color-box-shadow` is `rgba(77, 77, 77, 0.5)` (no dedicated shadow-strength var) — used at reduced opacity via `box-shadow: 0 1px 10px var(--color-box-shadow, rgba(0,0,0,.1))` for the join-page card lift.
+
+## Guest position updates intermittently 500'd on a guest's first-ever fix (`lib/Db/GuestMapper.php`)
+
+`GuestMapper::upsert()` used the classic check-then-act pattern: `findByGroupAndName()` to look for an existing row, insert if `DoesNotExistException`, otherwise update. When a guest starts sharing for the first time, the browser's `navigator.geolocation.watchPosition` can fire two position callbacks in quick succession (common right after permission is granted — an initial low-accuracy fix immediately followed by a better one), and each one is a separate HTTP request to `PositionController::guestUpdate()`. If both requests' `findByGroupAndName()` calls run before either has inserted, both see no existing row and both call `insert()` — the second hits `oc_locshare_guests`' `(group_id, name)` unique constraint and the request 500s, visible in `nextcloud.log` as `SQLSTATE[23000]: Integrity constraint violation: 19 UNIQUE constraint failed: oc_locshare_guests.group_id, oc_locshare_guests.name`. Found live (not in testing) via a guest named "Jannes" hitting it repeatedly in the log.
+
+Fix: catch `OCP\DB\Exception` around the `insert()` call, check `$e->getReason() === DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION`, and on that specific reason retry as an update (the racing request's insert has landed by the time this one's insert fails, so the retry's `findByGroupAndName()` now succeeds). Re-throw anything else unchanged. Verified by firing 5 concurrent `POST /guest/{token}` requests for a brand-new guest name — all returned `200` after the fix (all 500'd before it).
+
+Reminder while testing PHP changes against the dev container: opcache's `revalidate_freq` is 60s (see above), so a fresh edit can appear not to have taken effect for up to a minute. `docker exec locshare-dev apache2ctl graceful` forces an immediate reload instead of waiting.
+
 ## Companion app (React Native) — Android background location
 
 The companion app (`companion/`, added in commit b6d14d0) had several stacked bugs blocking end-to-end testing on the Android emulator, on top of each other, each failing silently or with a misleading symptom. All are now fixed.

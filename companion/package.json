@@ -8,6 +8,7 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
+    "@maplibre/maplibre-react-native": "^11.3.10",
     "@types/react": "~19.2.10",
     "babel-preset-expo": "~55.0.8",
     "expo": "~55.0.29",

@@ -33,6 +33,7 @@ import {
 } from './api';
 import { startSharing, stopSharing, isSharing } from './locationTask';
 import { loadNicknames, setNickname, type Nicknames } from './nicknames';
+import GroupMap from './GroupMap';
 
 interface Props {
   config: AppConfig;
@@ -750,6 +751,10 @@ function GroupDetail({
         <Text style={[styles.sectionNote, { marginTop: 4 }]}>
           Your name for this group. Only visible to you.
         </Text>
+
+        <View style={{ marginBottom: 14 }}>
+          <GroupMap members={group.members} />
+        </View>
 
         {group.members.length === 0 ? (
           <Text style={styles.emptyNote}>No positions yet</Text>
