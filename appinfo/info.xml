@@ -5,7 +5,7 @@
     <summary>Live location sharing for family and friends</summary>
     <description>Share your live location with family and friends directly within Nextcloud. No third-party services, no apps to install — just send a link.</description>
     <version>0.1.0</version>
-    <licence>agpl</licence>
+    <licence>AGPL-3.0-or-later</licence>
     <author>Jannes Klee</author>
     <namespace>LocShare</namespace>
     <category>social</category>
