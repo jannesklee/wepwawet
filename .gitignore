@@ -5,3 +5,4 @@ css/
 .php*.cache
 CLAUDE.md
 .claude/
+.expo/
