@@ -1,6 +1,7 @@
 /* eslint-disable */
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { isStale } from './utils/stale.js'
 
 ;(function () {
 	'use strict'
@@ -108,6 +109,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 		var map = null
 		var mapMarkers = {}
 		var mapPollTimer = null
+		var focusedUserId = null
 
 		var style = getComputedStyle(document.documentElement)
 		var primaryColor = style.getPropertyValue('--color-primary').trim() || '#0082c9'
@@ -200,6 +202,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 		function createGuestMarkerEl(member) {
 			var el = document.createElement('div')
 			el.className = 'ls-guest-marker' + (member.isMe ? ' ls-guest-marker--me' : '')
+			if (member.userId === focusedUserId) el.className += ' ls-guest-marker--focused'
 			if (member.avatarUrl) {
 				var img = document.createElement('img')
 				img.src = member.avatarUrl
@@ -221,6 +224,15 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 		function fitMapBounds(members) {
 			if (!map || members.length === 0) return
+
+			if (focusedUserId) {
+				var focused = members.filter(function (m) { return m.userId === focusedUserId })[0]
+				if (focused) {
+					map.flyTo({ center: [focused.lon, focused.lat], zoom: 15 })
+					return
+				}
+			}
+
 			if (members.length === 1) {
 				map.flyTo({ center: [members[0].lon, members[0].lat], zoom: 13 })
 				return
@@ -228,6 +240,88 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 			var bounds = new maplibregl.LngLatBounds()
 			members.forEach(function (m) { bounds.extend([m.lon, m.lat]) })
 			map.fitBounds(bounds, { padding: 50, maxZoom: 15 })
+		}
+
+		// Clicking a person (in the list, or their marker) centers the map on
+		// them and keeps following them on every poll; clicking again (or
+		// picking someone else) returns to the all-members overview.
+		function toggleFocus(userId, members) {
+			focusedUserId = focusedUserId === userId ? null : userId
+			fitMapBounds(members.filter(function (m) { return m.hasPosition }))
+			renderGuestMemberList(members)
+		}
+
+		function formatLastSeen(updatedAt) {
+			if (!updatedAt) return 'Not sharing'
+			var diff = Math.floor(Date.now() / 1000) - updatedAt
+			if (diff < 60) return 'Just now'
+			if (diff < 3600) return Math.floor(diff / 60) + ' min ago'
+			return Math.floor(diff / 3600) + ' h ago'
+		}
+
+		function renderGuestMemberList(members) {
+			var listEl = document.getElementById('ls-guest-member-list')
+			if (!listEl) return
+			var nowTs = Math.floor(Date.now() / 1000)
+			listEl.innerHTML = ''
+
+			members.forEach(function (member) {
+				var li = document.createElement('li')
+
+				var row = document.createElement('button')
+				row.type = 'button'
+				row.className = 'ls-guest-member-item'
+				if (member.hasPosition) row.className += ' ls-guest-member-item--clickable'
+				if (member.userId === focusedUserId) row.className += ' ls-guest-member-item--selected'
+				if (member.hasPosition) {
+					row.addEventListener('click', function () { toggleFocus(member.userId, members) })
+				} else {
+					row.disabled = true
+				}
+
+				var avatar = document.createElement('span')
+				avatar.className = 'ls-guest-member-avatar'
+				if (member.avatarUrl) {
+					var img = document.createElement('img')
+					img.src = member.avatarUrl
+					img.alt = member.displayName
+					img.style.width = '100%'
+					img.style.height = '100%'
+					img.style.borderRadius = '50%'
+					img.style.objectFit = 'cover'
+					avatar.appendChild(img)
+				} else {
+					avatar.textContent = member.displayName.charAt(0).toUpperCase()
+				}
+				row.appendChild(avatar)
+
+				var info = document.createElement('span')
+				info.className = 'ls-guest-member-info'
+
+				var name = document.createElement('span')
+				name.className = 'ls-guest-member-name'
+				name.textContent = member.displayName + (member.isMe ? ' (you)' : '')
+				info.appendChild(name)
+
+				var seen = document.createElement('span')
+				seen.className = 'ls-guest-member-seen'
+				seen.textContent = formatLastSeen(member.updatedAt)
+				info.appendChild(seen)
+
+				row.appendChild(info)
+
+				var dot = document.createElement('span')
+				dot.className = 'ls-guest-member-status'
+				if (member.hasPosition) {
+					dot.className += isStale(member.updatedAt, nowTs)
+						? ' ls-guest-member-status--stale'
+						: ' ls-guest-member-status--active'
+				}
+				row.appendChild(dot)
+
+				li.appendChild(row)
+				listEl.appendChild(li)
+			})
 		}
 
 		function updateGuestMarkers(members) {
@@ -238,10 +332,14 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 				seen[member.userId] = true
 				if (mapMarkers[member.userId]) {
 					mapMarkers[member.userId].setLngLat([member.lon, member.lat])
+					mapMarkers[member.userId].getElement().classList.toggle(
+						'ls-guest-marker--focused', member.userId === focusedUserId)
 				} else {
 					var popup = new maplibregl.Popup({ offset: 24, maxWidth: 'none' })
 						.setDOMContent(buildGuestPopupEl(member))
-					mapMarkers[member.userId] = new maplibregl.Marker({ element: createGuestMarkerEl(member) })
+					var markerEl = createGuestMarkerEl(member)
+					markerEl.addEventListener('click', function () { toggleFocus(member.userId, members) })
+					mapMarkers[member.userId] = new maplibregl.Marker({ element: markerEl })
 						.setLngLat([member.lon, member.lat])
 						.setPopup(popup)
 						.addTo(map)
@@ -254,6 +352,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 				}
 			})
 			fitMapBounds(members.filter(function (m) { return m.hasPosition }))
+			renderGuestMemberList(members)
 		}
 
 		function fetchGuestPositions() {

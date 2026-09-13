@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   ActivityIndicator,
+  Image,
   Linking,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
@@ -393,9 +395,14 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
     <SafeAreaView style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
+        <Image
+          source={require('../assets/adaptive-icon-foreground.png')}
+          style={styles.headerIcon}
+        />
         <Text style={styles.headerTitle}>LocShare</Text>
         <TouchableOpacity
           style={styles.settingsBtn}
+          accessibilityLabel="Settings"
           onPress={() => {
             Alert.alert(
               'Edit settings',
@@ -413,7 +420,7 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
             );
           }}
         >
-          <Text style={styles.settingsIcon}>⚙️</Text>
+          <MaterialIcons name="settings" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -1040,12 +1047,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: PRIMARY,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 10,
   },
+  headerIcon: { width: 28, height: 28 },
   headerTitle: { flex: 1, fontSize: 20, fontWeight: '700', color: '#fff' },
-  settingsBtn: { padding: 4 },
-  settingsIcon: { fontSize: 22 },
+  settingsBtn: {
+    padding: 12,
+    margin: -12,
+    borderRadius: 24,
+  },
 
   scroll: { padding: 16, gap: 14, paddingBottom: 48 },
 

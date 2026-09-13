@@ -92,6 +92,7 @@ $swUrl = $_['sw_url'] ?? '';
 		<p class="ls-join-sub" id="ls-status-text">Waiting for GPS fix…</p>
 		<p class="ls-join-note" id="ls-expires-text"></p>
 		<div id="ls-guest-map"></div>
+		<ul id="ls-guest-member-list" class="ls-guest-member-list"></ul>
 		<button id="ls-stop-btn" type="button" class="ls-btn-secondary">Stop sharing</button>
 	</div>
 
@@ -264,7 +265,96 @@ $swUrl = $_['sw_url'] ?? '';
 	border-width: 3px;
 }
 
+#ls-guest-map .ls-guest-marker--focused {
+	border-color: #f59e0b;
+	border-width: 3px;
+	width: 36px;
+	height: 36px;
+}
+
 #ls-guest-map .ls-guest-marker img { width: 100%; height: 100%; object-fit: cover; }
+
+.ls-guest-member-list {
+	list-style: none;
+	margin: 10px 0 0;
+	padding: 0;
+	text-align: left;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.ls-guest-member-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px;
+	margin: 0 -6px;
+	border-radius: var(--border-radius-element, 8px);
+	border: none;
+	background: none;
+	font: inherit;
+	width: 100%;
+	text-align: left;
+	cursor: default;
+}
+
+.ls-guest-member-item--clickable {
+	cursor: pointer;
+}
+
+.ls-guest-member-item--clickable:hover {
+	background: var(--color-background-hover, rgba(0, 0, 0, .05));
+}
+
+.ls-guest-member-item--selected {
+	background: var(--color-primary-light, #e0eefb);
+}
+
+.ls-guest-member-avatar {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	object-fit: cover;
+	background: var(--color-primary, #0082c9);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ls-guest-member-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.ls-guest-member-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--color-main-text, #222);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ls-guest-member-seen {
+	font-size: 12px;
+	color: var(--color-text-maxcontrast, #767676);
+}
+
+.ls-guest-member-status {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	background: #c8c8c8;
+}
+
+.ls-guest-member-status--active { background: #46ba61; }
+.ls-guest-member-status--stale { background: #c8c8c8; }
 
 @keyframes ls-pulse {
 	0%   { transform: scale(1); opacity: 0.4; }

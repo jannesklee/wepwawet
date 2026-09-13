@@ -2,6 +2,14 @@
 
 Debugging notes that aren't obvious from the code itself, kept here so they don't have to be re-discovered. Add to this file as new non-obvious issues get root-caused. See `docs/manual-testing.md` for the step-by-step setup and test workflow these notes support.
 
+## `debug=true` silently disables cache-busting on every JS/CSS URL - rebuilds look like they never took effect in the browser
+
+After `npm run build`, a browser that already had a LocShare page open (join page, main app, viewer - any of them) can keep showing the pre-build version indefinitely on a normal reload, even though the server is serving the new files correctly (verified independently with `curl`). Root cause: `TemplateLayout::getVersionHashSuffix()` in Nextcloud core returns an **empty string** - no `?v=<hash>` query param at all - whenever `debug=true` (`lib/private/TemplateLayout.php`, checked directly in the container), specifically so Chrome DevTools' workspace source-mapping isn't confused by a changing URL. This dev container has `debug=true` set (per this file's own setup instructions), so it applies here.
+
+Without that suffix, script/style URLs for this app's Vite entry bundles (`js/locshare-join.mjs`, `js/locshare-main.mjs`, `css/*.css` - the entry points aren't content-hashed, unlike their chunk dependencies, so `Util::addScript()`/`addStyle()` can reference them by stable basename) never change between builds. The server also sends `Cache-Control: max-age=15778463` (~6 months) on them. Combined, a browser that's ever loaded the page before has no reason to even send a conditional request - it just serves its disk cache, silently, on every subsequent normal reload (F5).
+
+Fix for testing: hard-refresh (Ctrl+Shift+R / Cmd+Shift+R), or open DevTools → Network → "Disable cache" while the tab is open, or use a private/incognito window. Not a bug to fix in the app itself - `debug=false` (production) restores the normal per-version cache-busting behavior, so this is purely a local dev-workflow trap. Worth remembering any time a JS/CSS change "doesn't show up" despite a clean rebuild and no errors anywhere in the pipeline.
+
 ## Background job registration silently failed on every request, occasionally as a hard 503
 
 `lib/AppInfo/Application.php`'s `register()` called `$context->registerBackgroundJob(CleanupExpiredGuests::class)` — but `IRegistrationContext` in this Nextcloud version (33.0.0.16, and per the API surface checked in `lib/public/AppFramework/Bootstrap/IRegistrationContext.php`) has no `registerBackgroundJob()` method at all. Background jobs in this version are registered **declaratively in `appinfo/info.xml`** instead (confirmed against core's `apps/files/appinfo/info.xml`, which uses a `<background-jobs><job>...</job></background-jobs>` block), not imperatively in the bootstrap class.
