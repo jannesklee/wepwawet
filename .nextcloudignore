@@ -2,7 +2,15 @@
 src/
 node_modules/
 .git/
-.github/
+.forgejo/
+
+# Companion app — separate React Native app, not part of the Nextcloud app
+companion/
+
+# Local tooling / editor state
+.claude/
+.expo/
+.gitignore
 
 # Build config
 vite.config.ts

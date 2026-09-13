@@ -1,6 +1,6 @@
 <?php
 
-namespace OCA\LocShare\Db;
+namespace OCA\Sopdet\Db;
 
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\QBMapper;
@@ -14,7 +14,7 @@ use OCP\IDBConnection;
 class GuestMapper extends QBMapper {
 
 	public function __construct(IDBConnection $db) {
-		parent::__construct($db, 'locshare_guests', Guest::class);
+		parent::__construct($db, 'sopdet_guests', Guest::class);
 	}
 
 	/** @return Guest[] */

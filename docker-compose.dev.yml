@@ -1,11 +1,11 @@
 services:
   nextcloud:
     image: nextcloud:latest
-    container_name: locshare-dev
+    container_name: sopdet-dev
     ports:
       - "8080:80"
     volumes:
-      - .:/var/www/html/custom_apps/locshare
+      - .:/var/www/html/custom_apps/sopdet
       - nextcloud_data:/var/www/html
     environment:
       - SQLITE_DATABASE=nextcloud

@@ -1,6 +1,6 @@
 <?php
 
-namespace OCA\LocShare\Db;
+namespace OCA\Sopdet\Db;
 
 use OCP\AppFramework\Db\Entity;
 use OCP\DB\Types;

@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const CONFIG_KEY = 'locshare_config';
+const CONFIG_KEY = 'sopdet_config';
 
 export type AuthMode = 'nextcloud' | 'guest';
 
@@ -70,7 +70,7 @@ export function normalizeUrl(url: string): string {
   return url.trim().replace(/\/+$/, '');
 }
 
-/** Parse a join URL like https://cloud.example.com/apps/locshare/join/{token} */
+/** Parse a join URL like https://cloud.example.com/apps/sopdet/join/{token} */
 export function parseInviteUrl(
   url: string,
 ): { server: string; token: string } | null {

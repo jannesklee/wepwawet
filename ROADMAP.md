@@ -1,4 +1,4 @@
-# LocShare Roadmap
+# Sopdet Roadmap
 
 ## MVP (done)
 
@@ -44,7 +44,7 @@ The PWA covers basic use cases but has limitations on iOS (no background GPS) an
 
 ## Release
 
-- [ ] **Nextcloud App Store submission** — requires a signing certificate from Nextcloud. Pipeline is prepared (`.github/workflows/release.yml`) but signing is commented out pending the certificate.
+- [ ] **Nextcloud App Store submission** — requires a signing certificate from Nextcloud. Pipeline is prepared (`.forgejo/workflows/release.yml`) but signing is commented out pending the certificate.
 - [ ] **Versioning** — follow semver, tag `v*.*.*` to trigger the release pipeline
 - [ ] **Changelog** — keep `CHANGELOG.md` up to date before each release
 

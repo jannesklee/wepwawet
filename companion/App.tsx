@@ -1,5 +1,5 @@
 // Import the task definition before any React rendering so expo-task-manager
-// can register 'locshare-background-location' at module load time.
+// can register 'sopdet-background-location' at module load time.
 import './src/locationTask';
 
 import React, { useEffect, useState } from 'react';

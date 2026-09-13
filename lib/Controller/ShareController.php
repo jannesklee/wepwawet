@@ -1,10 +1,10 @@
 <?php
 
-namespace OCA\LocShare\Controller;
+namespace OCA\Sopdet\Controller;
 
-use OCA\LocShare\Db\Share;
-use OCA\LocShare\Db\ShareMapper;
-use OCA\LocShare\Db\PositionMapper;
+use OCA\Sopdet\Db\Share;
+use OCA\Sopdet\Db\ShareMapper;
+use OCA\Sopdet\Db\PositionMapper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
@@ -114,7 +114,7 @@ class ShareController extends Controller {
 
 	private function formatShare(Share $share): array {
 		$viewUrl = rtrim($this->urlGenerator->getAbsoluteURL('/'), '/')
-			. $this->urlGenerator->linkToRoute('locshare.page.view', ['token' => $share->getToken()]);
+			. $this->urlGenerator->linkToRoute('sopdet.page.view', ['token' => $share->getToken()]);
 
 		return [
 			'id' => $share->getId(),

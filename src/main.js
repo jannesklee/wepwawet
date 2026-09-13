@@ -6,8 +6,8 @@ import { registerServiceWorker } from './utils/registerSW.js'
 document.addEventListener('DOMContentLoaded', () => {
 	const app = createApp(App)
 	app.mixin({ methods: { t, n } })
-	app.mount('#locshare-app')
+	app.mount('#sopdet-app')
 
-	const swUrl = loadState('locshare', 'locshare-state').swUrl
+	const swUrl = loadState('sopdet', 'sopdet-state').swUrl
 	registerServiceWorker(swUrl)
 })

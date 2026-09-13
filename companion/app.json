@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "LocShare",
-    "slug": "locshare-companion",
+    "name": "Sopdet",
+    "slug": "sopdet-companion",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,11 +11,11 @@
       "android"
     ],
     "ios": {
-      "bundleIdentifier": "com.locshare.companion",
+      "bundleIdentifier": "com.sopdet.companion",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "LocShare needs your location to share it with others.",
-        "NSLocationAlwaysUsageDescription": "LocShare needs your location in the background to continuously share it.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "LocShare needs your location in the background to continuously share it.",
+        "NSLocationWhenInUseUsageDescription": "Sopdet needs your location to share it with others.",
+        "NSLocationAlwaysUsageDescription": "Sopdet needs your location in the background to continuously share it.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Sopdet needs your location in the background to continuously share it.",
         "UIBackgroundModes": [
           "location",
           "fetch"
@@ -23,7 +23,7 @@
       }
     },
     "android": {
-      "package": "com.locshare.companion",
+      "package": "com.sopdet.companion",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "monochromeImage": "./assets/adaptive-icon-monochrome.png",
@@ -42,9 +42,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "LocShare needs your location in the background to continuously share it.",
-          "locationAlwaysPermission": "LocShare needs your location in the background to continuously share it.",
-          "locationWhenInUsePermission": "LocShare needs your location to share it with others.",
+          "locationAlwaysAndWhenInUsePermission": "Sopdet needs your location in the background to continuously share it.",
+          "locationAlwaysPermission": "Sopdet needs your location in the background to continuously share it.",
+          "locationWhenInUsePermission": "Sopdet needs your location to share it with others.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true
         }

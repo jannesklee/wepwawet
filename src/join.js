@@ -18,7 +18,7 @@ import { isStale } from './utils/stale.js'
 	]
 
 	document.addEventListener('DOMContentLoaded', function () {
-		var container = document.getElementById('locshare-join')
+		var container = document.getElementById('sopdet-join')
 		if (!container) return
 
 		if ('serviceWorker' in navigator && container.dataset.swUrl) {

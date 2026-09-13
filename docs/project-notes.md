@@ -1,10 +1,10 @@
 # Project Notes
 
-Origin, product vision, and current state of LocShare — background that doesn't fit neatly into `CLAUDE.md`'s build/architecture reference.
+Origin, product vision, and current state of Sopdet — background that doesn't fit neatly into `CLAUDE.md`'s build/architecture reference.
 
 ## Origin
 
-LocShare is a self-hosted live location sharing app for Nextcloud — the alternative to WhatsApp live location / Google Family Sharing. Built from scratch, no dependency on PhoneTrack or any other Nextcloud app.
+Sopdet is a self-hosted live location sharing app for Nextcloud — the alternative to WhatsApp live location / Google Family Sharing. Built from scratch, no dependency on PhoneTrack or any other Nextcloud app.
 
 The project started by extending PhoneTrack, but its sessions/devices/points data model was a burden for the simple "where is everyone right now" use case, so it was rebuilt as a clean, minimal app instead.
 
@@ -41,11 +41,11 @@ The project started by extending PhoneTrack, but its sessions/devices/points dat
 
 | Table | Purpose |
 |---|---|
-| `locshare_groups` | Sharing group owned by a user, has invite token |
-| `locshare_group_members` | Nextcloud users who joined a group |
-| `locshare_positions` | One row per Nextcloud user, upserted on each GPS update |
-| `locshare_guests` | Guests identified by (group_id, name), optional expiry |
-| `locshare_shares` | Timed share links: owner_user_id, token, expires_at, created_at |
+| `sopdet_groups` | Sharing group owned by a user, has invite token |
+| `sopdet_group_members` | Nextcloud users who joined a group |
+| `sopdet_positions` | One row per Nextcloud user, upserted on each GPS update |
+| `sopdet_guests` | Guests identified by (group_id, name), optional expiry |
+| `sopdet_shares` | Timed share links: owner_user_id, token, expires_at, created_at |
 
 ## Current file structure (key files not already covered in CLAUDE.md)
 
@@ -55,7 +55,7 @@ The project started by extending PhoneTrack, but its sessions/devices/points dat
 - `lib/Db/Guest.php` + `GuestMapper.php` — guests (deleteByGroupAndName, deleteExpired)
 - `lib/BackgroundJob/CleanupExpiredGuests.php` — hourly cleanup of expired guests + shares
 - `lib/Migration/Version000000Date20260315000000.php` — original 4 tables
-- `lib/Migration/Version000000Date20260317000000.php` — locshare_shares table
+- `lib/Migration/Version000000Date20260317000000.php` — sopdet_shares table
 
 **Frontend:**
 - `src/viewer.js` → `src/Viewer.vue` — public viewer page for timed share links
@@ -70,7 +70,7 @@ The project started by extending PhoneTrack, but its sessions/devices/points dat
 - `img/apple-touch-icon.png` — iOS home screen icon (180px)
 
 **Release pipeline:**
-- `.github/workflows/release.yml` — triggers on `v*.*.*` tag, builds JS, creates tarball, GitHub Release
+- `.forgejo/workflows/release.yml` — triggers on `v*.*.*` tag, builds JS, creates tarball, Forgejo Release (self-hosted; no GitHub involved)
 - `.nextcloudignore` — excludes dev files from release tarball
 - `CHANGELOG.md` — keep a changelog format
 - Signing certificate not yet obtained — commented out in workflow, add when ready (see `docs/app-store-release.md` for the full signing/release walkthrough)
@@ -81,7 +81,7 @@ The project started by extending PhoneTrack, but its sessions/devices/points dat
 - Sidebar: duration picker, "Create share link" button, active links list with copy+revoke
 - Member list in sidebar with green/grey activity dots (grays out + shows time when stale >1min)
 - Markers gray out (grayscale filter) when position is stale >1min
-- Public viewer page at `/apps/locshare/view/{token}` — polls position every 10s, expiry overlay
+- Public viewer page at `/apps/sopdet/view/{token}` — polls position every 10s, expiry overlay
 - Background job cleans up expired guests and shares hourly
 - PWA manifest (3 endpoints) + minimal pass-through service worker
 - `apple-touch-icon`, `theme-color` meta tags on all pages
@@ -89,7 +89,7 @@ The project started by extending PhoneTrack, but its sessions/devices/points dat
 
 ## Key CSS lessons learned
 
-- **Regular app pages** (`TemplateResponse` + `NcContent`/`NcAppContent`): add `#locshare-app { height: 100% }` to complete the height chain.
+- **Regular app pages** (`TemplateResponse` + `NcContent`/`NcAppContent`): add `#sopdet-app { height: 100% }` to complete the height chain.
 - **Public pages** (`PublicTemplateResponse`): use `position: fixed; top: var(--header-height, 50px); left:0; right:0; bottom:0` on the wrap element — public page layout has `height: auto` containers, so height inheritance never works. Don't try to override `#content`/`#content-wrapper`.
 - **CSS entry points**: each page template must use `addStyle($appId, $appId . '-{entryname}')` matching its own Vite entry point, not another page's.
 

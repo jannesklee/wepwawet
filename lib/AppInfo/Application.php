@@ -1,6 +1,6 @@
 <?php
 
-namespace OCA\LocShare\AppInfo;
+namespace OCA\Sopdet\AppInfo;
 
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
@@ -10,7 +10,7 @@ use OCP\AppFramework\Http\ContentSecurityPolicy;
 
 class Application extends App implements IBootstrap {
 
-	public const APP_ID = 'locshare';
+	public const APP_ID = 'sopdet';
 
 	public function __construct(array $urlParams = []) {
 		parent::__construct(self::APP_ID, $urlParams);

@@ -1,13 +1,13 @@
 <?php
 
-namespace OCA\LocShare\Controller;
+namespace OCA\Sopdet\Controller;
 
-use OCA\LocShare\AppInfo\Application;
-use OCA\LocShare\Db\Group;
-use OCA\LocShare\Db\GroupMapper;
-use OCA\LocShare\Db\GroupMember;
-use OCA\LocShare\Db\GroupMemberMapper;
-use OCA\LocShare\Db\ShareMapper;
+use OCA\Sopdet\AppInfo\Application;
+use OCA\Sopdet\Db\Group;
+use OCA\Sopdet\Db\GroupMapper;
+use OCA\Sopdet\Db\GroupMember;
+use OCA\Sopdet\Db\GroupMemberMapper;
+use OCA\Sopdet\Db\ShareMapper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
@@ -58,14 +58,14 @@ class PageController extends Controller {
 			'currentUserId' => $this->userId,
 			'currentUserDisplayName' => $displayName,
 			'currentUserAvatarUrl' => '/index.php/avatar/' . urlencode($this->userId) . '/64',
-			'groupsUrl' => $this->urlGenerator->linkToRoute('locshare.group.list'),
-			'updateUrl' => $this->urlGenerator->linkToRoute('locshare.position.update'),
-			'swUrl' => $this->urlGenerator->linkToRoute('locshare.page.serviceWorker'),
+			'groupsUrl' => $this->urlGenerator->linkToRoute('sopdet.group.list'),
+			'updateUrl' => $this->urlGenerator->linkToRoute('sopdet.position.update'),
+			'swUrl' => $this->urlGenerator->linkToRoute('sopdet.page.serviceWorker'),
 		];
 
-		$this->initialState->provideInitialState('locshare-state', $state);
+		$this->initialState->provideInitialState('sopdet-state', $state);
 
-		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.manifest')]);
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('sopdet.page.manifest')]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
 		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
 		// strips the Referer header on OSM tile requests - OSM's tile usage policy
@@ -81,7 +81,7 @@ class PageController extends Controller {
 	#[PublicPage]
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	#[BruteForceProtection(action: 'locshareJoin')]
+	#[BruteForceProtection(action: 'sopdetJoin')]
 	public function join(string $token): TemplateResponse {
 		try {
 			$group = $this->groupMapper->findByToken($token);
@@ -106,19 +106,19 @@ class PageController extends Controller {
 		$response = new PublicTemplateResponse(Application::APP_ID, 'join', [
 			'group_name' => $group->getName(),
 			'owner_display_name' => $ownerDisplayName,
-			'guest_update_url' => $this->urlGenerator->linkToRoute('locshare.position.guestUpdate', ['token' => $token]),
-			'guest_positions_url' => $this->urlGenerator->linkToRoute('locshare.group.guestPositions', ['token' => $token]),
-			'accept_url' => $this->urlGenerator->linkToRoute('locshare.group.accept', ['token' => $token]),
+			'guest_update_url' => $this->urlGenerator->linkToRoute('sopdet.position.guestUpdate', ['token' => $token]),
+			'guest_positions_url' => $this->urlGenerator->linkToRoute('sopdet.group.guestPositions', ['token' => $token]),
+			'accept_url' => $this->urlGenerator->linkToRoute('sopdet.group.accept', ['token' => $token]),
 			'main_url' => $this->userId !== null
-				? $this->urlGenerator->linkToRoute('locshare.page.index')
+				? $this->urlGenerator->linkToRoute('sopdet.page.index')
 				: null,
 			'user_id' => $this->userId,
 			'user_display_name' => $userDisplayName,
 			'debug' => $this->config->getSystemValueBool('debug', false),
-			'sw_url' => $this->urlGenerator->linkToRoute('locshare.page.serviceWorker'),
+			'sw_url' => $this->urlGenerator->linkToRoute('sopdet.page.serviceWorker'),
 		]);
-		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.joinManifest', ['token' => $token])]);
-		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', 'apple-touch-icon.png'))]);
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('sopdet.page.joinManifest', ['token' => $token])]);
+		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('sopdet', 'apple-touch-icon.png'))]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
 		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
 		// strips the Referer header on OSM tile requests - OSM's tile usage policy
@@ -160,15 +160,15 @@ class PageController extends Controller {
 		$state = [
 			'ownerDisplayName' => $ownerDisplayName,
 			'ownerAvatarUrl' => '/index.php/avatar/' . urlencode($share->getOwnerUserId()) . '/64',
-			'positionUrl' => $this->urlGenerator->linkToRoute('locshare.share.position', ['token' => $token]),
+			'positionUrl' => $this->urlGenerator->linkToRoute('sopdet.share.position', ['token' => $token]),
 			'expiresAt' => $share->getExpiresAt(),
-			'swUrl' => $this->urlGenerator->linkToRoute('locshare.page.serviceWorker'),
+			'swUrl' => $this->urlGenerator->linkToRoute('sopdet.page.serviceWorker'),
 		];
 
-		$this->initialState->provideInitialState('locshare-viewer-state', $state);
+		$this->initialState->provideInitialState('sopdet-viewer-state', $state);
 
-		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('locshare.page.viewerManifest', ['token' => $token])]);
-		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', 'apple-touch-icon.png'))]);
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('sopdet.page.viewerManifest', ['token' => $token])]);
+		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('sopdet', 'apple-touch-icon.png'))]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
 		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
 		// strips the Referer header on OSM tile requests - OSM's tile usage policy
@@ -189,7 +189,7 @@ class PageController extends Controller {
 	public function serviceWorker(): TemplateResponse {
 		$response = new TemplateResponse(Application::APP_ID, 'sw', [], TemplateResponse::RENDER_AS_BLANK);
 		$response->addHeader('Content-Type', 'application/javascript');
-		$response->addHeader('Service-Worker-Allowed', $this->urlGenerator->linkToRoute('locshare.page.index'));
+		$response->addHeader('Service-Worker-Allowed', $this->urlGenerator->linkToRoute('sopdet.page.index'));
 		return $response;
 	}
 
@@ -197,9 +197,9 @@ class PageController extends Controller {
 	#[NoCSRFRequired]
 	public function manifest(): DataResponse {
 		return $this->buildManifest(
-			name: 'LocShare',
-			startUrl: $this->urlGenerator->linkToRoute('locshare.page.index'),
-			scope: $this->urlGenerator->linkToRoute('locshare.page.index'),
+			name: 'Sopdet',
+			startUrl: $this->urlGenerator->linkToRoute('sopdet.page.index'),
+			scope: $this->urlGenerator->linkToRoute('sopdet.page.index'),
 		);
 	}
 
@@ -212,9 +212,9 @@ class PageController extends Controller {
 			$ownerUser = $this->userManager->get($share->getOwnerUserId());
 			$name = ($ownerUser !== null ? $ownerUser->getDisplayName() : $share->getOwnerUserId()) . ' — Live location';
 		} catch (DoesNotExistException $e) {
-			$name = 'LocShare';
+			$name = 'Sopdet';
 		}
-		$url = $this->urlGenerator->linkToRoute('locshare.page.view', ['token' => $token]);
+		$url = $this->urlGenerator->linkToRoute('sopdet.page.view', ['token' => $token]);
 		return $this->buildManifest(name: $name, startUrl: $url, scope: $url);
 	}
 
@@ -222,15 +222,15 @@ class PageController extends Controller {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function joinManifest(string $token): DataResponse {
-		$url = $this->urlGenerator->linkToRoute('locshare.page.join', ['token' => $token]);
+		$url = $this->urlGenerator->linkToRoute('sopdet.page.join', ['token' => $token]);
 		return $this->buildManifest(name: 'Share location', startUrl: $url, scope: $url);
 	}
 
 	private function buildManifest(string $name, string $startUrl, string $scope): DataResponse {
-		$iconBase = $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('locshare', ''));
+		$iconBase = $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('sopdet', ''));
 		$manifest = [
 			'name' => $name,
-			'short_name' => 'LocShare',
+			'short_name' => 'Sopdet',
 			'description' => 'Live location sharing',
 			'start_url' => $startUrl,
 			'scope' => $scope,

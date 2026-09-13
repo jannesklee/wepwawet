@@ -5,8 +5,8 @@ import { registerServiceWorker } from './utils/registerSW.js'
 
 document.addEventListener('DOMContentLoaded', () => {
 	const app = createApp(Viewer)
-	app.mount('#locshare-viewer')
+	app.mount('#sopdet-viewer')
 
-	const swUrl = loadState('locshare', 'locshare-viewer-state').swUrl
+	const swUrl = loadState('sopdet', 'sopdet-viewer-state').swUrl
 	registerServiceWorker(swUrl)
 })

@@ -1,5 +1,5 @@
 <template>
-	<NcContent app-name="locshare">
+	<NcContent app-name="sopdet">
 		<NcAppNavigation>
 			<template #list>
 				<template v-if="openGroup">
@@ -204,14 +204,14 @@ import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import { isStale } from './utils/stale.js'
 
 export default {
-	name: 'LocShareApp',
+	name: 'SopdetApp',
 
 	components: { NcContent, NcAppNavigation, NcAppContent, NcButton, CheckIcon, ContentCopyIcon, DeleteIcon },
 
 	data() {
 		return {
 			map: null,
-			state: loadState('locshare', 'locshare-state'),
+			state: loadState('sopdet', 'sopdet-state'),
 			watchId: null,
 			pollInterval: null,
 			heartbeatInterval: null,
@@ -368,7 +368,7 @@ export default {
 			}
 			this.joiningGroup = true
 			try {
-				await axios.post(generateUrl('/apps/locshare/join/' + token + '/accept'))
+				await axios.post(generateUrl('/apps/sopdet/join/' + token + '/accept'))
 				this.joinInviteUrl = ''
 				await this.fetchGroups()
 				await this.fetchPositions()
@@ -386,7 +386,7 @@ export default {
 			this.creatingGroup = true
 			try {
 				const { data } = await axios.post(
-					generateUrl('/apps/locshare/groups') + '?name=' + encodeURIComponent(name),
+					generateUrl('/apps/sopdet/groups') + '?name=' + encodeURIComponent(name),
 				)
 				data.members = []
 				this.groups.push(data)
@@ -402,7 +402,7 @@ export default {
 			const next = !group.visible
 			try {
 				await axios.post(
-					generateUrl('/apps/locshare/group/' + group.id + '/visibility') + '?visible=' + (next ? '1' : '0'),
+					generateUrl('/apps/sopdet/group/' + group.id + '/visibility') + '?visible=' + (next ? '1' : '0'),
 				)
 				group.visible = next
 				this.fetchPositions()
@@ -414,7 +414,7 @@ export default {
 		async removeGroupMember(group, userId) {
 			try {
 				await axios.post(
-					generateUrl('/apps/locshare/group/' + group.id + '/members/' + encodeURIComponent(userId) + '/remove'),
+					generateUrl('/apps/sopdet/group/' + group.id + '/members/' + encodeURIComponent(userId) + '/remove'),
 				)
 				group.members = group.members.filter((m) => m.userId !== userId)
 			} catch (e) {
@@ -425,7 +425,7 @@ export default {
 		async deleteGroup(group) {
 			if (!confirm(`Delete "${group.name}"? Everyone in it will lose access, including you.`)) return
 			try {
-				await axios.post(generateUrl('/apps/locshare/group/' + group.id + '/delete'))
+				await axios.post(generateUrl('/apps/sopdet/group/' + group.id + '/delete'))
 				this.groups = this.groups.filter((g) => g.id !== group.id)
 				this.openGroupId = null
 			} catch (e) {
@@ -653,7 +653,7 @@ export default {
 
 		async fetchShares() {
 			try {
-				const { data } = await axios.get(generateUrl('/apps/locshare/shares'))
+				const { data } = await axios.get(generateUrl('/apps/sopdet/shares'))
 				this.shares = data
 			} catch (e) {
 				console.error('Failed to fetch shares', e)
@@ -664,7 +664,7 @@ export default {
 			this.creatingShare = true
 			try {
 				const { data } = await axios.post(
-					generateUrl('/apps/locshare/share') + '?duration=' + this.shareMinutes,
+					generateUrl('/apps/sopdet/share') + '?duration=' + this.shareMinutes,
 				)
 				this.shares.unshift(data)
 				this.copyShare(data)
@@ -677,7 +677,7 @@ export default {
 
 		async revokeShare(id) {
 			try {
-				await axios.post(generateUrl('/apps/locshare/share/' + id + '/revoke'))
+				await axios.post(generateUrl('/apps/sopdet/share/' + id + '/revoke'))
 				this.shares = this.shares.filter((s) => s.id !== id)
 			} catch (e) {
 				console.error('Failed to revoke share', e)
@@ -740,7 +740,7 @@ export default {
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
 /* Ensure Vue root fills Nextcloud's content area so height:100% chain works */
-#locshare-app {
+#sopdet-app {
 	height: 100%;
 }
 

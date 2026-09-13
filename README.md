@@ -1,4 +1,4 @@
-# LocShare
+# Sopdet
 
 > **Status:** Pre-1.0, actively developed. Core features below work end-to-end; not yet published to any app store. Expect some rough edges as it heads toward a first stable release.
 
@@ -22,10 +22,10 @@ A minimal Nextcloud app for live location sharing — the self-hosted alternativ
 
 ## Installation
 
-Place the `locshare` folder in your Nextcloud `apps/` (or `custom_apps/`) directory and enable it:
+Place the `sopdet` folder in your Nextcloud `apps/` (or `custom_apps/`) directory and enable it:
 
 ```bash
-php occ app:enable locshare
+php occ app:enable sopdet
 php occ maintenance:repair
 ```
 
@@ -43,14 +43,14 @@ Docker dev environment:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
-docker exec --user www-data locshare-dev php occ app:enable locshare
+docker exec --user www-data sopdet-dev php occ app:enable sopdet
 ```
 
 Access at http://localhost:8080 (admin / admin123). See `docs/manual-testing.md` for the full manual test workflow and `docs/dev-notes.md` for non-obvious bugs/gotchas already root-caused.
 
 ## Mobile
 
-**Browser (PWA):** log into your Nextcloud instance and navigate to LocShare — Android (Chrome) and iOS (Safari) will offer an install-to-home-screen prompt automatically; other browsers have an "Add to Home Screen" option in the menu. Good for quick, foreground sharing.
+**Browser (PWA):** log into your Nextcloud instance and navigate to Sopdet — Android (Chrome) and iOS (Safari) will offer an install-to-home-screen prompt automatically; other browsers have an "Add to Home Screen" option in the menu. Good for quick, foreground sharing.
 
 ## Companion app (not yet released)
 

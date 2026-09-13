@@ -1,30 +1,30 @@
 <?xml version="1.0"?>
 <info>
-    <id>locshare</id>
-    <name>LocShare</name>
+    <id>sopdet</id>
+    <name>Sopdet</name>
     <summary>Live location sharing for family and friends</summary>
     <description>Share your live location with family and friends directly within Nextcloud. No third-party services, no apps to install — just send a link.</description>
     <version>0.1.0</version>
     <licence>AGPL-3.0-or-later</licence>
     <author>Jannes Klee</author>
-    <namespace>LocShare</namespace>
+    <namespace>Sopdet</namespace>
     <category>social</category>
-    <website>https://github.com/jannesklee/locshare</website>
-    <bugs>https://github.com/jannesklee/locshare/issues</bugs>
-    <repository>https://github.com/jannesklee/locshare</repository>
-    <screenshot>https://raw.githubusercontent.com/jannesklee/locshare/main/img/screenshot.png</screenshot>
-    <screenshot>https://raw.githubusercontent.com/jannesklee/locshare/main/img/screenshot_share.png</screenshot>
+    <website>https://forgejo.jannesklee.de/jklee/Sopdet</website>
+    <bugs>https://forgejo.jannesklee.de/jklee/Sopdet/issues</bugs>
+    <repository>https://forgejo.jannesklee.de/jklee/Sopdet</repository>
+    <screenshot>https://forgejo.jannesklee.de/jklee/Sopdet/raw/branch/main/img/screenshot.png</screenshot>
+    <screenshot>https://forgejo.jannesklee.de/jklee/Sopdet/raw/branch/main/img/screenshot_share.png</screenshot>
     <dependencies>
         <nextcloud min-version="30" max-version="34"/>
     </dependencies>
     <background-jobs>
-        <job>OCA\LocShare\BackgroundJob\CleanupExpiredGuests</job>
+        <job>OCA\Sopdet\BackgroundJob\CleanupExpiredGuests</job>
     </background-jobs>
     <navigations>
         <navigation>
-            <id>locshare</id>
-            <name>LocShare</name>
-            <route>locshare.page.index</route>
+            <id>sopdet</id>
+            <name>Sopdet</name>
+            <route>sopdet.page.index</route>
             <icon>app.svg</icon>
             <order>5</order>
         </navigation>

@@ -1,5 +1,5 @@
 <?php
-$appId = OCA\LocShare\AppInfo\Application::APP_ID;
+$appId = OCA\Sopdet\AppInfo\Application::APP_ID;
 \OCP\Util::addScript($appId, $appId . '-join');
 \OCP\Util::addStyle($appId, $appId . '-join');
 
@@ -14,7 +14,7 @@ $mainUrl = $_['main_url'] ?? null;
 $debug = $_['debug'] ?? false;
 $swUrl = $_['sw_url'] ?? '';
 ?>
-<div id="locshare-join"
+<div id="sopdet-join"
 	data-sw-url="<?= htmlspecialchars($swUrl, ENT_QUOTES) ?>"
 	data-guest-update-url="<?= htmlspecialchars($guestUpdateUrl, ENT_QUOTES) ?>"
 	data-guest-positions-url="<?= htmlspecialchars($guestPositionsUrl, ENT_QUOTES) ?>"
@@ -41,7 +41,7 @@ $swUrl = $_['sw_url'] ?? '';
 		<div class="ls-join-icon">✅</div>
 		<h1>You joined "<?= p($groupName) ?>"</h1>
 		<?php if ($mainUrl !== null): ?>
-		<a href="<?= htmlspecialchars($mainUrl, ENT_QUOTES) ?>" class="ls-map-link">Open LocShare →</a>
+		<a href="<?= htmlspecialchars($mainUrl, ENT_QUOTES) ?>" class="ls-map-link">Open Sopdet →</a>
 		<?php endif; ?>
 	</div>
 
@@ -113,7 +113,7 @@ $swUrl = $_['sw_url'] ?? '';
 </div>
 
 <style>
-#locshare-join {
+#sopdet-join {
 	min-height: 60vh;
 	display: flex;
 	align-items: center;
@@ -362,7 +362,7 @@ $swUrl = $_['sw_url'] ?? '';
 }
 
 @media (max-width: 480px) {
-	#locshare-join { padding: 16px; }
+	#sopdet-join { padding: 16px; }
 	.ls-join-card { padding: 28px 20px; }
 }
 </style>

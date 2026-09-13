@@ -1,12 +1,12 @@
 <?php
 
-namespace OCA\LocShare\Controller;
+namespace OCA\Sopdet\Controller;
 
-use OCA\LocShare\Db\Guest;
-use OCA\LocShare\Db\GuestMapper;
-use OCA\LocShare\Db\GroupMapper;
-use OCA\LocShare\Db\Position;
-use OCA\LocShare\Db\PositionMapper;
+use OCA\Sopdet\Db\Guest;
+use OCA\Sopdet\Db\GuestMapper;
+use OCA\Sopdet\Db\GroupMapper;
+use OCA\Sopdet\Db\Position;
+use OCA\Sopdet\Db\PositionMapper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;

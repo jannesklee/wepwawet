@@ -1,13 +1,13 @@
 <?php
 
-namespace OCA\LocShare\Controller;
+namespace OCA\Sopdet\Controller;
 
-use OCA\LocShare\Db\Group;
-use OCA\LocShare\Db\GroupMapper;
-use OCA\LocShare\Db\GroupMember;
-use OCA\LocShare\Db\GroupMemberMapper;
-use OCA\LocShare\Db\GuestMapper;
-use OCA\LocShare\Db\PositionMapper;
+use OCA\Sopdet\Db\Group;
+use OCA\Sopdet\Db\GroupMapper;
+use OCA\Sopdet\Db\GroupMember;
+use OCA\Sopdet\Db\GroupMemberMapper;
+use OCA\Sopdet\Db\GuestMapper;
+use OCA\Sopdet\Db\PositionMapper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
@@ -62,7 +62,7 @@ class GroupController extends Controller {
 		}
 
 		return new DataResponse([
-			'updateUrl' => $this->urlGenerator->linkToRoute('locshare.position.update'),
+			'updateUrl' => $this->urlGenerator->linkToRoute('sopdet.position.update'),
 			'groups' => array_map(fn ($group) => $this->formatGroup($group), $groups),
 		]);
 	}
@@ -182,8 +182,8 @@ class GroupController extends Controller {
 			'memberCount'  => $memberCount,
 			'visible'      => $visible,
 			'inviteUrl'    => rtrim($this->urlGenerator->getAbsoluteURL('/'), '/')
-				. $this->urlGenerator->linkToRoute('locshare.page.join', ['token' => $group->getToken()]),
-			'positionsUrl' => $this->urlGenerator->linkToRoute('locshare.group.positions', ['id' => $group->getId()]),
+				. $this->urlGenerator->linkToRoute('sopdet.page.join', ['token' => $group->getToken()]),
+			'positionsUrl' => $this->urlGenerator->linkToRoute('sopdet.group.positions', ['id' => $group->getId()]),
 		];
 	}
 
@@ -233,7 +233,7 @@ class GroupController extends Controller {
 		}
 
 		return new DataResponse([
-			'main_url' => $this->urlGenerator->linkToRoute('locshare.page.index'),
+			'main_url' => $this->urlGenerator->linkToRoute('sopdet.page.index'),
 		]);
 	}
 

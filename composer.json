@@ -1,11 +1,11 @@
 {
-	"name": "locshare/locshare",
+	"name": "sopdet/sopdet",
 	"description": "Live location sharing for Nextcloud",
 	"license": "AGPL-3.0-or-later",
 	"require": {},
 	"autoload": {
 		"psr-4": {
-			"OCA\\LocShare\\": "lib/"
+			"OCA\\Sopdet\\": "lib/"
 		}
 	}
 }

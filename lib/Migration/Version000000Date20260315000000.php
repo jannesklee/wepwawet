@@ -1,6 +1,6 @@
 <?php
 
-namespace OCA\LocShare\Migration;
+namespace OCA\Sopdet\Migration;
 
 use Closure;
 use OCP\DB\ISchemaWrapper;
@@ -14,31 +14,31 @@ class Version000000Date20260315000000 extends SimpleMigrationStep {
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();
 
-		if (!$schema->hasTable('locshare_groups')) {
-			$table = $schema->createTable('locshare_groups');
+		if (!$schema->hasTable('sopdet_groups')) {
+			$table = $schema->createTable('sopdet_groups');
 			$table->addColumn('id', Types::INTEGER, ['autoincrement' => true, 'notnull' => true]);
 			$table->addColumn('name', Types::STRING, ['length' => 255, 'notnull' => true]);
 			$table->addColumn('owner_user_id', Types::STRING, ['length' => 64, 'notnull' => true]);
 			$table->addColumn('token', Types::STRING, ['length' => 64, 'notnull' => true]);
 			$table->addColumn('created_at', Types::INTEGER, ['notnull' => true]);
 			$table->setPrimaryKey(['id']);
-			$table->addUniqueIndex(['token'], 'locshare_groups_token');
-			$table->addIndex(['owner_user_id'], 'locshare_groups_owner');
+			$table->addUniqueIndex(['token'], 'sopdet_groups_token');
+			$table->addIndex(['owner_user_id'], 'sopdet_groups_owner');
 		}
 
-		if (!$schema->hasTable('locshare_group_members')) {
-			$table = $schema->createTable('locshare_group_members');
+		if (!$schema->hasTable('sopdet_group_members')) {
+			$table = $schema->createTable('sopdet_group_members');
 			$table->addColumn('id', Types::INTEGER, ['autoincrement' => true, 'notnull' => true]);
 			$table->addColumn('group_id', Types::INTEGER, ['notnull' => true]);
 			$table->addColumn('user_id', Types::STRING, ['length' => 64, 'notnull' => true]);
 			$table->addColumn('joined_at', Types::INTEGER, ['notnull' => true]);
 			$table->setPrimaryKey(['id']);
-			$table->addUniqueIndex(['group_id', 'user_id'], 'locshare_gm_unique');
-			$table->addIndex(['user_id'], 'locshare_gm_user');
+			$table->addUniqueIndex(['group_id', 'user_id'], 'sopdet_gm_unique');
+			$table->addIndex(['user_id'], 'sopdet_gm_user');
 		}
 
-		if (!$schema->hasTable('locshare_positions')) {
-			$table = $schema->createTable('locshare_positions');
+		if (!$schema->hasTable('sopdet_positions')) {
+			$table = $schema->createTable('sopdet_positions');
 			$table->addColumn('id', Types::INTEGER, ['autoincrement' => true, 'notnull' => true]);
 			$table->addColumn('user_id', Types::STRING, ['length' => 64, 'notnull' => true]);
 			$table->addColumn('lat', Types::FLOAT, ['notnull' => true]);
@@ -49,11 +49,11 @@ class Version000000Date20260315000000 extends SimpleMigrationStep {
 			$table->addColumn('bearing', Types::FLOAT, ['notnull' => false]);
 			$table->addColumn('updated_at', Types::INTEGER, ['notnull' => true]);
 			$table->setPrimaryKey(['id']);
-			$table->addUniqueIndex(['user_id'], 'locshare_pos_user');
+			$table->addUniqueIndex(['user_id'], 'sopdet_pos_user');
 		}
 
-		if (!$schema->hasTable('locshare_guests')) {
-			$table = $schema->createTable('locshare_guests');
+		if (!$schema->hasTable('sopdet_guests')) {
+			$table = $schema->createTable('sopdet_guests');
 			$table->addColumn('id', Types::INTEGER, ['autoincrement' => true, 'notnull' => true]);
 			$table->addColumn('group_id', Types::INTEGER, ['notnull' => true]);
 			$table->addColumn('name', Types::STRING, ['length' => 64, 'notnull' => true]);
@@ -66,8 +66,8 @@ class Version000000Date20260315000000 extends SimpleMigrationStep {
 			$table->addColumn('updated_at', Types::INTEGER, ['notnull' => false]);
 			$table->addColumn('expires_at', Types::INTEGER, ['notnull' => false]);
 			$table->setPrimaryKey(['id']);
-			$table->addIndex(['group_id'], 'locshare_guests_group');
-			$table->addUniqueIndex(['group_id', 'name'], 'locshare_guests_name');
+			$table->addIndex(['group_id'], 'sopdet_guests_group');
+			$table->addUniqueIndex(['group_id', 'name'], 'sopdet_guests_name');
 		}
 
 		return $schema;

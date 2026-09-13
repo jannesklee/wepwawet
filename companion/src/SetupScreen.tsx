@@ -128,7 +128,7 @@ export default function SetupScreen({ onSaved, initialConfig, onCancel }: Props)
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
             )}
-            <Text style={styles.title}>LocShare</Text>
+            <Text style={styles.title}>Sopdet</Text>
             <Text style={styles.subtitle}>Connect to your Nextcloud</Text>
           </View>
 
@@ -210,7 +210,7 @@ export default function SetupScreen({ onSaved, initialConfig, onCancel }: Props)
                   style={[styles.input, styles.multilineInput]}
                   value={inviteUrl}
                   onChangeText={setInviteUrl}
-                  placeholder="https://cloud.example.com/apps/locshare/join/…"
+                  placeholder="https://cloud.example.com/apps/sopdet/join/…"
                   placeholderTextColor="#aaa"
                   autoCapitalize="none"
                   autoCorrect={false}

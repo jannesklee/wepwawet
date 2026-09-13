@@ -35,11 +35,11 @@ import { loadState } from '@nextcloud/initial-state'
 import { isStale } from './utils/stale.js'
 
 export default {
-	name: 'LocShareViewer',
+	name: 'SopdetViewer',
 
 	data() {
 		return {
-			state: loadState('locshare', 'locshare-viewer-state'),
+			state: loadState('sopdet', 'sopdet-viewer-state'),
 			map: null,
 			marker: null,
 			markerEl: null,
