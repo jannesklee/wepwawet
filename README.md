@@ -1,6 +1,6 @@
 # LocShare
 
-> **Status:** Pre-1.0, actively developed. Core features below work end-to-end and are in daily personal use; not yet published to any app store. Expect some rough edges as it heads toward a first stable release.
+> **Status:** Pre-1.0, actively developed. Core features below work end-to-end; not yet published to any app store. Expect some rough edges as it heads toward a first stable release.
 
 A minimal Nextcloud app for live location sharing — the self-hosted alternative to WhatsApp Live Location / Google Family Sharing. No third-party services: map tiles come straight from OpenStreetMap, and everything else — accounts, groups, positions — stays on your own Nextcloud.
 
