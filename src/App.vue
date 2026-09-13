@@ -18,7 +18,9 @@
 							<li
 								v-for="member in openGroup.members"
 								:key="member.userId"
-								class="ls-member-item">
+								class="ls-member-item"
+								:class="{ 'ls-member-item--selected': member.userId === focusedUserId, 'ls-member-item--clickable': member.hasPosition }"
+								@click="toggleFocus(member)">
 								<img
 									v-if="member.avatarUrl"
 									class="ls-member-avatar"
@@ -39,7 +41,7 @@
 									v-if="openGroup.isOwner && !member.isMe"
 									type="tertiary"
 									aria-label="Remove member"
-									@click="removeGroupMember(openGroup, member.userId)">
+									@click.stop="removeGroupMember(openGroup, member.userId)">
 									<template #icon>
 										<DeleteIcon :size="16" />
 									</template>
@@ -220,6 +222,10 @@ export default {
 			// which single group (if any) is currently narrowing the map.
 			memberGroupsByUser: {},
 			nowTs: Math.floor(Date.now() / 1000),
+			// Set by clicking a member in the sidebar list or their marker's
+			// popup - centers the map on just them instead of fitting everyone
+			// in frame, and keeps following them across polls until toggled off.
+			focusedUserId: null,
 			statusInterval: null,
 			lastPosition: null,
 			wakeLock: null,
@@ -479,10 +485,13 @@ export default {
 					const marker = this.markers[member.userId]
 					marker.setLngLat([member.lon, member.lat])
 					marker.getElement().classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
+					marker.getElement().classList.toggle('ls-marker--focused', member.userId === this.focusedUserId)
 					marker.getPopup()?.setDOMContent(this.buildPopupContent(member))
 				} else {
 					const el = this.createMarkerEl(member)
 					el.classList.toggle('ls-marker--stale', isStale(member.updatedAt, this.nowTs))
+					el.classList.toggle('ls-marker--focused', member.userId === this.focusedUserId)
+					el.addEventListener('click', () => this.toggleFocus(member))
 					this.markers[member.userId] = new maplibregl.Marker({ element: el })
 						.setLngLat([member.lon, member.lat])
 						.setPopup(new maplibregl.Popup({ offset: 28, maxWidth: 'none' })
@@ -498,7 +507,29 @@ export default {
 				}
 			}
 
-			this.fitBounds(members.filter((m) => m.hasPosition))
+			this.applyMapView(members)
+		},
+
+		// Toggling a member focuses the map on them (and keeps following their
+		// position on every subsequent poll) until they're clicked again or the
+		// open group changes. Ignored for members with no position - there's
+		// nowhere to focus to.
+		toggleFocus(member) {
+			if (!member.hasPosition) return
+			this.focusedUserId = this.focusedUserId === member.userId ? null : member.userId
+			this.applyMapView(this.mapMembers)
+		},
+
+		applyMapView(members) {
+			const positioned = members.filter((m) => m.hasPosition)
+			if (this.focusedUserId) {
+				const focused = positioned.find((m) => m.userId === this.focusedUserId)
+				if (focused) {
+					this.map.flyTo({ center: [focused.lon, focused.lat], zoom: 15 })
+					return
+				}
+			}
+			this.fitBounds(positioned)
 		},
 
 		memberStatusClass(member) {
@@ -698,6 +729,7 @@ export default {
 		// Re-render markers immediately when switching in/out of a group's
 		// detail view, instead of waiting for the next 15s poll.
 		openGroupId() {
+			this.focusedUserId = null
 			this.updateMarkers(this.mapMembers)
 		},
 	},
@@ -890,6 +922,17 @@ export default {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	border-radius: var(--border-radius-element, 8px);
+	padding: 2px 6px;
+	margin: 0 -6px;
+}
+
+.ls-member-item--clickable {
+	cursor: pointer;
+}
+
+.ls-member-item--selected {
+	background: var(--color-primary-light, #e0eefb);
 }
 
 .ls-member-avatar {
@@ -1042,6 +1085,13 @@ export default {
 	filter: grayscale(100%);
 	opacity: 0.5;
 	transition: filter 0.4s, opacity 0.4s;
+}
+
+.ls-marker--focused {
+	border-color: #f59e0b;
+	border-width: 3px;
+	width: 42px;
+	height: 42px;
 }
 
 .ls-marker img {

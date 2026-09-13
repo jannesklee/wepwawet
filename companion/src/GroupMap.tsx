@@ -23,9 +23,14 @@ const PRIMARY = '#0082c9';
 
 interface Props {
   members: Member[];
+  // Centers the map on this member instead of fitting everyone in frame -
+  // set from tapping a MemberRow or a marker itself, cleared (null/undefined)
+  // to go back to the all-members overview.
+  focusedUserId?: string | null;
+  onSelectMember?: (userId: string) => void;
 }
 
-export default function GroupMap({ members }: Props) {
+export default function GroupMap({ members, focusedUserId, onSelectMember }: Props) {
   const cameraRef = useRef<CameraRef>(null);
 
   const positioned = useMemo(
@@ -34,9 +39,19 @@ export default function GroupMap({ members }: Props) {
   );
 
   const boundsKey = positioned.map((m) => `${m.userId}:${m.lat},${m.lon}`).join('|');
+  const focused = focusedUserId ? positioned.find((m) => m.userId === focusedUserId) : null;
 
   useEffect(() => {
     if (!cameraRef.current || positioned.length === 0) return;
+
+    if (focused) {
+      cameraRef.current.flyTo({
+        center: [focused.lon as number, focused.lat as number],
+        zoom: 15,
+        duration: 500,
+      });
+      return;
+    }
 
     if (positioned.length === 1) {
       cameraRef.current.flyTo({
@@ -54,7 +69,7 @@ export default function GroupMap({ members }: Props) {
       { padding: { top: 40, right: 40, bottom: 40, left: 40 }, duration: 500 },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boundsKey]);
+  }, [boundsKey, focused?.userId]);
 
   if (positioned.length === 0) {
     return (
@@ -75,8 +90,19 @@ export default function GroupMap({ members }: Props) {
           }}
         />
         {positioned.map((m) => (
-          <Marker key={m.userId} id={m.userId} lngLat={[m.lon as number, m.lat as number]}>
-            <View style={[styles.marker, m.isMe && styles.markerMe]}>
+          <Marker
+            key={m.userId}
+            id={m.userId}
+            lngLat={[m.lon as number, m.lat as number]}
+            onPress={() => onSelectMember?.(m.userId)}
+          >
+            <View
+              style={[
+                styles.marker,
+                m.isMe && styles.markerMe,
+                m.userId === focusedUserId && styles.markerFocused,
+              ]}
+            >
               <Text style={styles.markerText}>{m.displayName.charAt(0).toUpperCase()}</Text>
             </View>
           </Marker>
@@ -110,5 +136,12 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   markerMe: { borderColor: PRIMARY, borderWidth: 3 },
+  markerFocused: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderColor: '#f59e0b',
+    borderWidth: 3,
+  },
   markerText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

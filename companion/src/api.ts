@@ -120,6 +120,47 @@ export async function sendGuestPosition(
   }
 }
 
+// Public lookup used to label a joined guest group with its real name
+// instead of the guest's own display name - see GroupController::info().
+export async function fetchGroupInfo(
+  server: string,
+  token: string,
+): Promise<{ name: string; ownerDisplayName: string } | null> {
+  try {
+    const res = await fetch(
+      `${normalizeUrl(server)}/apps/locshare/join/${token}/info`,
+      { headers: guestHeaders },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as { name: string; ownerDisplayName: string };
+  } catch (e) {
+    console.error('[LocShare] fetchGroupInfo error:', e);
+    return null;
+  }
+}
+
+// Same shape as fetchMembers(), but for guest mode - uses the group's
+// invite token as the auth boundary instead of a Nextcloud session. The
+// `name` param marks the caller's own entry as "me", mirroring
+// GroupController::guestPositions().
+export async function fetchGuestPositions(link: GuestLink): Promise<Member[]> {
+  try {
+    const params = new URLSearchParams({ name: link.name });
+    const res = await fetch(
+      `${normalizeUrl(link.server)}/apps/locshare/guest/${link.token}/positions?${params}`,
+      { headers: guestHeaders },
+    );
+    if (!res.ok) {
+      console.error('[LocShare] fetchGuestPositions failed:', res.status, await res.text());
+      return [];
+    }
+    return (await res.json()) as Member[];
+  } catch (e) {
+    console.error('[LocShare] fetchGuestPositions error:', e);
+    return [];
+  }
+}
+
 export async function stopGuestLink(link: GuestLink): Promise<void> {
   try {
     const params = new URLSearchParams({ name: link.name, stop: '1' });

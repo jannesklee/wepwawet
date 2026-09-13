@@ -106,22 +106,26 @@ Getting an instant, silent `[LocShare] sendPosition error: TypeError: Network re
 To get a real invite token/URL for guest testing (§5) or to double check group state:
 
 ```bash
-curl -sS -u admin:admin123 http://localhost:8080/apps/locshare/api/me -H "OCS-APIRequest: true"
+curl -sS -u admin:admin123 http://localhost:8080/apps/locshare/api/groups -H "OCS-APIRequest: true"
 ```
 
 ## 5. Test the companion app — guest / invite-link mode
 
-1. Get the group token from the `api/me` call above (or from the "Invite link" the web app shows).
-2. Reset the app to the setup screen. The in-app gear icon overlaps the Expo dev client's floating "Tools" bubble and taps land on the wrong one — instead of fighting that overlap, just clear the app's stored config directly:
+Guest mode supports joining multiple groups at once (`config.guestLinks` array in `companion/src/config.ts`), each with its own name/enabled toggle/duration — it's not a single-link setup.
+
+1. Get the group token from the `api/groups` call above (or from the "Invite link" the web app shows).
+2. If the app isn't already in guest mode, reset it to the setup screen first. The in-app gear icon overlaps the Expo dev client's floating "Tools" bubble and taps land on the wrong one — instead of fighting that overlap, just clear the app's stored config directly:
    ```bash
    adb shell pm clear com.locshare.companion
    ```
    (this also resets granted permissions — you'll need to re-grant location access, see §6)
-3. Relaunch (see §2's reconnect snippet), "Invite link" tab:
+   Relaunch (see §2's reconnect snippet) and pick the "Invite link" tab.
+   If the app is *already* in guest mode, skip this — just use the "Paste invite link to join" row on the home screen's Groups card to add another group without resetting anything.
+3. Fill in:
    - Invite URL: `http://10.0.2.2:8080/apps/locshare/join/{token}` — use `10.0.2.2`, not whatever host the real invite link shows, since that's what's reachable from inside the emulator.
-   - Display name: anything (e.g. `TestGuest`)
+   - Your name in this group: anything (e.g. `TestGuest`)
    - Share for: any duration
-4. Save & start sharing.
+4. Save & start sharing (first-time setup) or tap "+ Join group" (adding another group). Each joined group gets its own on/off switch on the home screen.
 5. Verify from the host:
    ```bash
    curl -sS -u admin:admin123 http://localhost:8080/apps/locshare/group/1/positions -H "OCS-APIRequest: true"

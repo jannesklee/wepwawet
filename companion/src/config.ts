@@ -11,6 +11,10 @@ export interface GuestLink {
   token: string;
   server: string;
   name: string;
+  // The group's own name (e.g. "Mom's Location"), fetched from the server at
+  // join time - optional because configs saved before this field existed
+  // won't have it; UI code falls back to a placeholder when absent.
+  groupName?: string;
   duration: number; // minutes; 0 = no expiry
   enabled: boolean;
 }

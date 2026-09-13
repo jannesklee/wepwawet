@@ -19,6 +19,8 @@ import {
   fetchGroups,
   fetchMembers,
   fetchShares,
+  fetchGroupInfo,
+  fetchGuestPositions,
   createGroup,
   joinGroup,
   setGroupVisibility,
@@ -58,6 +60,7 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [groupsFailed, setGroupsFailed] = useState(false);
   const [openGroupId, setOpenGroupId] = useState<number | null>(null);
+  const [openGuestToken, setOpenGuestToken] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [copiedGroupId, setCopiedGroupId] = useState<number | null>(null);
@@ -118,6 +121,25 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  // Backfills groupName on links saved before that field existed (or where
+  // the lookup failed at join time), so old configs pick up group labels
+  // without the user having to rejoin.
+  useEffect(() => {
+    if (config.mode !== 'guest') return;
+    const missing = config.guestLinks.filter((l) => !l.groupName);
+    if (missing.length === 0) return;
+    (async () => {
+      const infos = await Promise.all(
+        missing.map((l) => fetchGroupInfo(l.server, l.token)),
+      );
+      const updated = config.guestLinks.map((l) => {
+        const i = missing.findIndex((m) => m.token === l.token);
+        return i >= 0 && infos[i] ? { ...l, groupName: infos[i]!.name } : l;
+      });
+      await persistGuestLinks(updated);
+    })();
+  }, [config.mode, config.guestLinks.length]);
 
   // Requests location permission and starts the background task if it isn't
   // already running. Called as a side effect of the action that actually
@@ -185,6 +207,7 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
     }
 
     setJoiningGuestLink(true);
+    const info = await fetchGroupInfo(parsed.server, parsed.token);
     const ok = await ensureSharing();
     setJoiningGuestLink(false);
     if (!ok) return;
@@ -193,6 +216,7 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
       token: parsed.token,
       server: parsed.server,
       name,
+      groupName: info?.name,
       duration: newGuestDuration,
       enabled: true,
     };
@@ -363,6 +387,7 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
   }
 
   const openGroup = groups.find((g) => g.id === openGroupId) ?? null;
+  const openGuestLink = config.guestLinks.find((l) => l.token === openGuestToken) ?? null;
 
   return (
     <SafeAreaView style={styles.root}>
@@ -404,6 +429,8 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
             onDeleteGroup={() => handleDeleteGroup(openGroup)}
             onSetNickname={(value) => handleSetNickname(openGroup.id, value)}
           />
+        ) : openGuestLink ? (
+          <GuestGroupDetail link={openGuestLink} onBack={() => setOpenGuestToken(null)} />
         ) : (
           <>
             {/* ── Sharing status (read-only; derived from groups + share links) ── */}
@@ -452,11 +479,20 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
                     key={link.token}
                     style={[styles.groupOverviewRow, i > 0 && styles.groupBlockBorder]}
                   >
-                    <View style={styles.groupNameTouchable}>
-                      <Text style={styles.groupName} numberOfLines={1}>
-                        {link.name}
-                      </Text>
-                    </View>
+                    <TouchableOpacity
+                      style={styles.groupNameTouchable}
+                      onPress={() => setOpenGuestToken(link.token)}
+                    >
+                      <View style={{ flexShrink: 1 }}>
+                        <Text style={styles.groupName} numberOfLines={1}>
+                          {link.groupName || 'Unnamed group'}
+                        </Text>
+                        <Text style={styles.memberSeen} numberOfLines={1}>
+                          sharing as {link.name}
+                        </Text>
+                      </View>
+                      <Text style={styles.chevron}>›</Text>
+                    </TouchableOpacity>
                     <View style={styles.groupVisibleRow}>
                       <Switch
                         value={link.enabled}
@@ -721,10 +757,15 @@ function GroupDetail({
   onSetNickname: (value: string) => void;
 }) {
   const [nicknameDraft, setNicknameDraft] = useState(nickname);
+  const [focusedUserId, setFocusedUserId] = useState<string | null>(null);
 
   useEffect(() => {
     setNicknameDraft(nickname);
   }, [group.id, nickname]);
+
+  function toggleFocus(userId: string) {
+    setFocusedUserId((cur) => (cur === userId ? null : userId));
+  }
 
   return (
     <>
@@ -753,7 +794,11 @@ function GroupDetail({
         </Text>
 
         <View style={{ marginBottom: 14 }}>
-          <GroupMap members={group.members} />
+          <GroupMap
+            members={group.members}
+            focusedUserId={focusedUserId}
+            onSelectMember={toggleFocus}
+          />
         </View>
 
         {group.members.length === 0 ? (
@@ -763,6 +808,8 @@ function GroupDetail({
             <MemberRow
               key={m.userId}
               member={m}
+              selected={m.userId === focusedUserId}
+              onSelect={() => toggleFocus(m.userId)}
               onRemove={
                 group.isOwner && !m.isMe ? () => onRemoveMember(m.userId) : undefined
               }
@@ -785,6 +832,81 @@ function GroupDetail({
           <TouchableOpacity style={styles.deleteGroupBtn} onPress={onDeleteGroup}>
             <Text style={styles.deleteGroupBtnText}>Delete group</Text>
           </TouchableOpacity>
+        )}
+      </View>
+    </>
+  );
+}
+
+// ── GuestGroupDetail ─────────────────────────────────────────────────────────
+// Guest-mode counterpart to GroupDetail - there's no group ownership/nickname/
+// invite-copy here (a guest link is just a token+name), just the map and who
+// else is currently sharing. Polls every 10s while open, matching the web
+// guest join page's join.js.
+
+function GuestGroupDetail({
+  link,
+  onBack,
+}: {
+  link: GuestLink;
+  onBack: () => void;
+}) {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [focusedUserId, setFocusedUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      const data = await fetchGuestPositions(link);
+      if (!cancelled) {
+        setMembers(data);
+        setLoaded(true);
+      }
+    }
+    poll();
+    const id = setInterval(poll, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [link.token, link.server, link.name]);
+
+  function toggleFocus(userId: string) {
+    setFocusedUserId((cur) => (cur === userId ? null : userId));
+  }
+
+  return (
+    <>
+      <TouchableOpacity style={styles.backRow} onPress={onBack}>
+        <Text style={styles.backText}>‹ Groups</Text>
+      </TouchableOpacity>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionLabel}>{link.groupName || 'Unnamed group'}</Text>
+        <Text style={styles.sectionNote}>Sharing as {link.name}</Text>
+
+        <View style={{ marginBottom: 14, marginTop: 12 }}>
+          <GroupMap
+            members={members}
+            focusedUserId={focusedUserId}
+            onSelectMember={toggleFocus}
+          />
+        </View>
+
+        {!loaded ? (
+          <ActivityIndicator color={PRIMARY} />
+        ) : members.length === 0 ? (
+          <Text style={styles.emptyNote}>No positions yet</Text>
+        ) : (
+          members.map((m) => (
+            <MemberRow
+              key={m.userId}
+              member={m}
+              selected={m.userId === focusedUserId}
+              onSelect={() => toggleFocus(m.userId)}
+            />
+          ))
         )}
       </View>
     </>
@@ -827,9 +949,13 @@ function ShareRow({
 function MemberRow({
   member,
   onRemove,
+  selected,
+  onSelect,
 }: {
   member: Member;
   onRemove?: () => void;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const nowSec = Math.floor(Date.now() / 1000);
   const stale =
@@ -841,7 +967,11 @@ function MemberRow({
     : '#22c55e';
 
   return (
-    <View style={styles.memberRow}>
+    <TouchableOpacity
+      style={[styles.memberRow, selected && styles.memberRowSelected]}
+      onPress={member.hasPosition ? onSelect : undefined}
+      activeOpacity={member.hasPosition ? 0.6 : 1}
+    >
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>
           {member.displayName.charAt(0).toUpperCase()}
@@ -876,7 +1006,7 @@ function MemberRow({
           <Text style={styles.memberRemoveText}>✕</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -1048,6 +1178,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+  },
+  memberRowSelected: {
+    backgroundColor: '#eef6fc',
   },
   avatar: {
     width: 36,

@@ -192,6 +192,31 @@ class GroupController extends Controller {
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	/**
+	 * Public group name/owner lookup by invite token, for the companion app's
+	 * guest mode - it never loads the server-rendered join page (that's how
+	 * the web guest flow gets group_name/owner_display_name, see
+	 * PageController::join), so it needs this to label a joined group with
+	 * something better than the guest's own display name.
+	 */
+	#[PublicPage]
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function info(string $token): DataResponse {
+		try {
+			$group = $this->groupMapper->findByToken($token);
+		} catch (DoesNotExistException $e) {
+			return new DataResponse(['error' => 'not_found'], Http::STATUS_NOT_FOUND);
+		}
+
+		$owner = $this->userManager->get($group->getOwnerUserId());
+
+		return new DataResponse([
+			'name' => $group->getName(),
+			'ownerDisplayName' => $owner?->getDisplayName() ?? $group->getOwnerUserId(),
+		]);
+	}
+
 	public function accept(string $token): DataResponse {
 		try {
 			$group = $this->groupMapper->findByToken($token);
