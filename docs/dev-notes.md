@@ -36,6 +36,14 @@ Fix: catch `OCP\DB\Exception` around the `insert()` call, check `$e->getReason()
 
 Reminder while testing PHP changes against the dev container: opcache's `revalidate_freq` is 60s (see above), so a fresh edit can appear not to have taken effect for up to a minute. `docker exec locshare-dev apache2ctl graceful` forces an immediate reload instead of waiting.
 
+## `templates/join.php` never loaded its own CSS bundle - `\OCP\Util::addStyle()` was missing
+
+`templates/main.php` and `templates/viewer.php` both call `\OCP\Util::addScript($appId, '...')` *and* `\OCP\Util::addStyle($appId, '...')`. `templates/join.php` only ever called `addScript`. This went unnoticed for a long time because the join page's own visual styling all lives in an inline `<style>` block in the template itself, so nothing *looked* broken - but it meant the Vite-built `css/locshare-join.css` (which is just `@import './join-<hash>.chunk.css'` - see `@nextcloud/vite-config`'s "css-entry-points-plugin") was never linked into the page at all, and any real CSS imported from `join.js` silently never took effect.
+
+This surfaced when a MapLibre map was added to the guest join view (2026-09): `join.js` gained `import 'maplibre-gl/dist/maplibre-gl.css'`, and the symptom was "the map tiles show up but the person markers don't" - the base map still renders because MapLibre positions the canvas via inline styles, but marker elements depend on `.maplibregl-marker { position: absolute; ... }` from that external stylesheet, which was never loaded.
+
+General lesson: whenever a `templates/*.php` page's JS gains a real CSS dependency (a library import, not just inline `<style>` in the template), check that its template calls both `Util::addScript()` **and** `Util::addStyle()` with the same basename - confirm by checking the rendered page's `<head>` for a `<link rel="stylesheet" href=".../css/<name>.css">`, not just that the script tag is present.
+
 ## Companion app (React Native) — Android background location
 
 The companion app (`companion/`, added in commit b6d14d0) had several stacked bugs blocking end-to-end testing on the Android emulator, on top of each other, each failing silently or with a misleading symptom. All are now fixed.

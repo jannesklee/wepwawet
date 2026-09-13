@@ -1,6 +1,7 @@
 <?php
 $appId = OCA\LocShare\AppInfo\Application::APP_ID;
 \OCP\Util::addScript($appId, $appId . '-join');
+\OCP\Util::addStyle($appId, $appId . '-join');
 
 $guestUpdateUrl = $_['guest_update_url'];
 $guestPositionsUrl = $_['guest_positions_url'];
