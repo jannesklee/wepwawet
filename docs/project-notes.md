@@ -70,7 +70,7 @@ The project started by extending PhoneTrack, but its sessions/devices/points dat
 - `img/apple-touch-icon.png` — iOS home screen icon (180px)
 
 **Release pipeline:**
-- `.forgejo/workflows/release.yml` — triggers on `v*.*.*` tag, builds JS, creates tarball, Forgejo Release (self-hosted; no GitHub involved)
+- `.github/workflows/release.yml` — triggers on `v*.*.*` tag, builds JS, creates tarball, GitHub Release
 - `.nextcloudignore` — excludes dev files from release tarball
 - `CHANGELOG.md` — keep a changelog format
 - Signing certificate not yet obtained — commented out in workflow, add when ready (see `docs/app-store-release.md` for the full signing/release walkthrough)

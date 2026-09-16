@@ -2,7 +2,7 @@
 src/
 node_modules/
 .git/
-.forgejo/
+.github/
 
 # Companion app — separate React Native app, not part of the Nextcloud app
 companion/

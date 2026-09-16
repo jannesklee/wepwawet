@@ -9,11 +9,11 @@
     <author>Jannes Klee</author>
     <namespace>Wepwawet</namespace>
     <category>social</category>
-    <website>https://forgejo.jannesklee.de/jklee/wepwawet</website>
-    <bugs>https://forgejo.jannesklee.de/jklee/wepwawet/issues</bugs>
-    <repository>https://forgejo.jannesklee.de/jklee/wepwawet</repository>
-    <screenshot>https://forgejo.jannesklee.de/jklee/wepwawet/raw/branch/main/img/screenshot.png</screenshot>
-    <screenshot>https://forgejo.jannesklee.de/jklee/wepwawet/raw/branch/main/img/screenshot_share.png</screenshot>
+    <website>https://github.com/jannesklee/wepwawet</website>
+    <bugs>https://github.com/jannesklee/wepwawet/issues</bugs>
+    <repository>https://github.com/jannesklee/wepwawet</repository>
+    <screenshot>https://github.com/jannesklee/wepwawet/raw/main/img/screenshot.png</screenshot>
+    <screenshot>https://github.com/jannesklee/wepwawet/raw/main/img/screenshot_share.png</screenshot>
     <dependencies>
         <nextcloud min-version="30" max-version="34"/>
     </dependencies>
