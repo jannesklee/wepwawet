@@ -1,9 +1,9 @@
 <?php
 
-namespace OCA\Sopdet\BackgroundJob;
+namespace OCA\Wepwawet\BackgroundJob;
 
-use OCA\Sopdet\Db\GuestMapper;
-use OCA\Sopdet\Db\ShareMapper;
+use OCA\Wepwawet\Db\GuestMapper;
+use OCA\Wepwawet\Db\ShareMapper;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
 

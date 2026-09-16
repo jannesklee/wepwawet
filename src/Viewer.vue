@@ -35,11 +35,11 @@ import { loadState } from '@nextcloud/initial-state'
 import { isStale } from './utils/stale.js'
 
 export default {
-	name: 'SopdetViewer',
+	name: 'WepwawetViewer',
 
 	data() {
 		return {
-			state: loadState('sopdet', 'sopdet-viewer-state'),
+			state: loadState('wepwawet', 'wepwawet-viewer-state'),
 			map: null,
 			marker: null,
 			markerEl: null,

@@ -1,13 +1,13 @@
 <?php
 
-namespace OCA\Sopdet\Controller;
+namespace OCA\Wepwawet\Controller;
 
-use OCA\Sopdet\AppInfo\Application;
-use OCA\Sopdet\Db\Group;
-use OCA\Sopdet\Db\GroupMapper;
-use OCA\Sopdet\Db\GroupMember;
-use OCA\Sopdet\Db\GroupMemberMapper;
-use OCA\Sopdet\Db\ShareMapper;
+use OCA\Wepwawet\AppInfo\Application;
+use OCA\Wepwawet\Db\Group;
+use OCA\Wepwawet\Db\GroupMapper;
+use OCA\Wepwawet\Db\GroupMember;
+use OCA\Wepwawet\Db\GroupMemberMapper;
+use OCA\Wepwawet\Db\ShareMapper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
@@ -58,14 +58,14 @@ class PageController extends Controller {
 			'currentUserId' => $this->userId,
 			'currentUserDisplayName' => $displayName,
 			'currentUserAvatarUrl' => '/index.php/avatar/' . urlencode($this->userId) . '/64',
-			'groupsUrl' => $this->urlGenerator->linkToRoute('sopdet.group.list'),
-			'updateUrl' => $this->urlGenerator->linkToRoute('sopdet.position.update'),
-			'swUrl' => $this->urlGenerator->linkToRoute('sopdet.page.serviceWorker'),
+			'groupsUrl' => $this->urlGenerator->linkToRoute('wepwawet.group.list'),
+			'updateUrl' => $this->urlGenerator->linkToRoute('wepwawet.position.update'),
+			'swUrl' => $this->urlGenerator->linkToRoute('wepwawet.page.serviceWorker'),
 		];
 
-		$this->initialState->provideInitialState('sopdet-state', $state);
+		$this->initialState->provideInitialState('wepwawet-state', $state);
 
-		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('sopdet.page.manifest')]);
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('wepwawet.page.manifest')]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
 		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
 		// strips the Referer header on OSM tile requests - OSM's tile usage policy
@@ -81,7 +81,7 @@ class PageController extends Controller {
 	#[PublicPage]
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	#[BruteForceProtection(action: 'sopdetJoin')]
+	#[BruteForceProtection(action: 'wepwawetJoin')]
 	public function join(string $token): TemplateResponse {
 		try {
 			$group = $this->groupMapper->findByToken($token);
@@ -106,19 +106,19 @@ class PageController extends Controller {
 		$response = new PublicTemplateResponse(Application::APP_ID, 'join', [
 			'group_name' => $group->getName(),
 			'owner_display_name' => $ownerDisplayName,
-			'guest_update_url' => $this->urlGenerator->linkToRoute('sopdet.position.guestUpdate', ['token' => $token]),
-			'guest_positions_url' => $this->urlGenerator->linkToRoute('sopdet.group.guestPositions', ['token' => $token]),
-			'accept_url' => $this->urlGenerator->linkToRoute('sopdet.group.accept', ['token' => $token]),
+			'guest_update_url' => $this->urlGenerator->linkToRoute('wepwawet.position.guestUpdate', ['token' => $token]),
+			'guest_positions_url' => $this->urlGenerator->linkToRoute('wepwawet.group.guestPositions', ['token' => $token]),
+			'accept_url' => $this->urlGenerator->linkToRoute('wepwawet.group.accept', ['token' => $token]),
 			'main_url' => $this->userId !== null
-				? $this->urlGenerator->linkToRoute('sopdet.page.index')
+				? $this->urlGenerator->linkToRoute('wepwawet.page.index')
 				: null,
 			'user_id' => $this->userId,
 			'user_display_name' => $userDisplayName,
 			'debug' => $this->config->getSystemValueBool('debug', false),
-			'sw_url' => $this->urlGenerator->linkToRoute('sopdet.page.serviceWorker'),
+			'sw_url' => $this->urlGenerator->linkToRoute('wepwawet.page.serviceWorker'),
 		]);
-		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('sopdet.page.joinManifest', ['token' => $token])]);
-		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('sopdet', 'apple-touch-icon.png'))]);
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('wepwawet.page.joinManifest', ['token' => $token])]);
+		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('wepwawet', 'apple-touch-icon.png'))]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
 		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
 		// strips the Referer header on OSM tile requests - OSM's tile usage policy
@@ -160,15 +160,15 @@ class PageController extends Controller {
 		$state = [
 			'ownerDisplayName' => $ownerDisplayName,
 			'ownerAvatarUrl' => '/index.php/avatar/' . urlencode($share->getOwnerUserId()) . '/64',
-			'positionUrl' => $this->urlGenerator->linkToRoute('sopdet.share.position', ['token' => $token]),
+			'positionUrl' => $this->urlGenerator->linkToRoute('wepwawet.share.position', ['token' => $token]),
 			'expiresAt' => $share->getExpiresAt(),
-			'swUrl' => $this->urlGenerator->linkToRoute('sopdet.page.serviceWorker'),
+			'swUrl' => $this->urlGenerator->linkToRoute('wepwawet.page.serviceWorker'),
 		];
 
-		$this->initialState->provideInitialState('sopdet-viewer-state', $state);
+		$this->initialState->provideInitialState('wepwawet-viewer-state', $state);
 
-		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('sopdet.page.viewerManifest', ['token' => $token])]);
-		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('sopdet', 'apple-touch-icon.png'))]);
+		\OCP\Util::addHeader('link', ['rel' => 'manifest', 'href' => $this->urlGenerator->linkToRoute('wepwawet.page.viewerManifest', ['token' => $token])]);
+		\OCP\Util::addHeader('link', ['rel' => 'apple-touch-icon', 'href' => $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('wepwawet', 'apple-touch-icon.png'))]);
 		\OCP\Util::addHeader('meta', ['name' => 'theme-color', 'content' => '#0082c9']);
 		// Nextcloud hardcodes `Referrer-Policy: no-referrer` in lib/base.php, which
 		// strips the Referer header on OSM tile requests - OSM's tile usage policy
@@ -189,7 +189,7 @@ class PageController extends Controller {
 	public function serviceWorker(): TemplateResponse {
 		$response = new TemplateResponse(Application::APP_ID, 'sw', [], TemplateResponse::RENDER_AS_BLANK);
 		$response->addHeader('Content-Type', 'application/javascript');
-		$response->addHeader('Service-Worker-Allowed', $this->urlGenerator->linkToRoute('sopdet.page.index'));
+		$response->addHeader('Service-Worker-Allowed', $this->urlGenerator->linkToRoute('wepwawet.page.index'));
 		return $response;
 	}
 
@@ -197,9 +197,9 @@ class PageController extends Controller {
 	#[NoCSRFRequired]
 	public function manifest(): DataResponse {
 		return $this->buildManifest(
-			name: 'Sopdet',
-			startUrl: $this->urlGenerator->linkToRoute('sopdet.page.index'),
-			scope: $this->urlGenerator->linkToRoute('sopdet.page.index'),
+			name: 'Wepwawet',
+			startUrl: $this->urlGenerator->linkToRoute('wepwawet.page.index'),
+			scope: $this->urlGenerator->linkToRoute('wepwawet.page.index'),
 		);
 	}
 
@@ -212,9 +212,9 @@ class PageController extends Controller {
 			$ownerUser = $this->userManager->get($share->getOwnerUserId());
 			$name = ($ownerUser !== null ? $ownerUser->getDisplayName() : $share->getOwnerUserId()) . ' — Live location';
 		} catch (DoesNotExistException $e) {
-			$name = 'Sopdet';
+			$name = 'Wepwawet';
 		}
-		$url = $this->urlGenerator->linkToRoute('sopdet.page.view', ['token' => $token]);
+		$url = $this->urlGenerator->linkToRoute('wepwawet.page.view', ['token' => $token]);
 		return $this->buildManifest(name: $name, startUrl: $url, scope: $url);
 	}
 
@@ -222,15 +222,15 @@ class PageController extends Controller {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function joinManifest(string $token): DataResponse {
-		$url = $this->urlGenerator->linkToRoute('sopdet.page.join', ['token' => $token]);
+		$url = $this->urlGenerator->linkToRoute('wepwawet.page.join', ['token' => $token]);
 		return $this->buildManifest(name: 'Share location', startUrl: $url, scope: $url);
 	}
 
 	private function buildManifest(string $name, string $startUrl, string $scope): DataResponse {
-		$iconBase = $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('sopdet', ''));
+		$iconBase = $this->urlGenerator->getAbsoluteURL($this->urlGenerator->imagePath('wepwawet', ''));
 		$manifest = [
 			'name' => $name,
-			'short_name' => 'Sopdet',
+			'short_name' => 'Wepwawet',
 			'description' => 'Live location sharing',
 			'start_url' => $startUrl,
 			'scope' => $scope,

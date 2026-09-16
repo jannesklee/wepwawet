@@ -1,6 +1,6 @@
 <?php
 
-namespace OCA\Sopdet\Db;
+namespace OCA\Wepwawet\Db;
 
 use OCP\AppFramework\Db\Entity;
 use OCP\DB\Types;

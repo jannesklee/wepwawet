@@ -15,29 +15,29 @@
 ```bash
 mkdir -p ~/.nextcloud/certificates/
 cd ~/.nextcloud/certificates/
-openssl req -nodes -newkey rsa:4096 -keyout sopdet.key -out sopdet.csr -subj "/CN=sopdet"
+openssl req -nodes -newkey rsa:4096 -keyout wepwawet.key -out wepwawet.csr -subj "/CN=wepwawet"
 ```
 
-Keep `sopdet.key` secret — never commit it.
+Keep `wepwawet.key` secret — never commit it.
 
 ### 2. Get the certificate signed by Nextcloud
 
 Submit a pull request to `https://github.com/nextcloud/app-certificate-requests`:
 
-- Create the file `sopdet/sopdet.csr` in the PR with the contents of `~/.nextcloud/certificates/sopdet.csr`
-- Include a link to the repo (`https://forgejo.jannesklee.de/jklee/Sopdet`) in the PR description
+- Create the file `wepwawet/wepwawet.csr` in the PR with the contents of `~/.nextcloud/certificates/wepwawet.csr`
+- Include a link to the repo (`https://forgejo.jannesklee.de/jklee/Wepwawet`) in the PR description
 
-Nextcloud reviewers will sign it and post `sopdet.crt` back in the PR.
-Save the certificate to `~/.nextcloud/certificates/sopdet.crt`.
+Nextcloud reviewers will sign it and post `wepwawet.crt` back in the PR.
+Save the certificate to `~/.nextcloud/certificates/wepwawet.crt`.
 
 ### 3. Register the app on apps.nextcloud.com
 
 1. Create an account at `https://apps.nextcloud.com`
 2. Go to `https://apps.nextcloud.com/developer/apps/new`
-3. Paste the contents of `sopdet.crt` into the **Certificate** field
+3. Paste the contents of `wepwawet.crt` into the **Certificate** field
 4. Generate the ownership proof:
    ```bash
-   echo -n "sopdet" | openssl dgst -sha512 -sign ~/.nextcloud/certificates/sopdet.key | openssl base64
+   echo -n "wepwawet" | openssl dgst -sha512 -sign ~/.nextcloud/certificates/wepwawet.key | openssl base64
    ```
 5. Paste the output into the **Signature** field and submit
 
@@ -51,8 +51,8 @@ On `forgejo.jannesklee.de`, repo go to **Settings → Actions → Secrets** and 
 
 | Secret | Value |
 |---|---|
-| `APP_PRIVATE_KEY` | Full contents of `~/.nextcloud/certificates/sopdet.key` |
-| `APP_PUBLIC_CRT` | Full contents of `~/.nextcloud/certificates/sopdet.crt` |
+| `APP_PRIVATE_KEY` | Full contents of `~/.nextcloud/certificates/wepwawet.key` |
+| `APP_PUBLIC_CRT` | Full contents of `~/.nextcloud/certificates/wepwawet.crt` |
 | `APPSTORE_TOKEN` | The API token from apps.nextcloud.com |
 | `FORGEJO_TOKEN` | A Forgejo access token (`write:repository` scope) — needed to create the release and upload the tarball via the API, since Forgejo has no built-in release-action equivalent to GitHub's `softprops/action-gh-release` |
 

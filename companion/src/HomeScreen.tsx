@@ -165,7 +165,7 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
     if (bg !== 'granted') {
       Alert.alert(
         'Background location needed',
-        'Allow "Always" location access so Sopdet keeps sharing when the screen is off.',
+        'Allow "Always" location access so Wepwawet keeps sharing when the screen is off.',
         [
           { text: 'Open Settings', onPress: () => Linking.openSettings() },
           { text: 'Cancel', style: 'cancel' },
@@ -399,7 +399,7 @@ export default function HomeScreen({ config, onConfigChange, onReconfigure }: Pr
           source={require('../assets/adaptive-icon-foreground.png')}
           style={styles.headerIcon}
         />
-        <Text style={styles.headerTitle}>Sopdet</Text>
+        <Text style={styles.headerTitle}>Wepwawet</Text>
         <TouchableOpacity
           style={styles.settingsBtn}
           accessibilityLabel="Settings"

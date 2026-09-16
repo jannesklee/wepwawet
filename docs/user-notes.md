@@ -1,6 +1,6 @@
 # Who This Project Is For
 
-Product requirements and working preferences behind Sopdet, kept alongside the technical notes since they explain *why* certain decisions were made.
+Product requirements and working preferences behind Wepwawet, kept alongside the technical notes since they explain *why* certain decisions were made.
 
 ## What the maintainer wants
 

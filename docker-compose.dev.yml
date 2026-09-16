@@ -1,11 +1,11 @@
 services:
   nextcloud:
     image: nextcloud:latest
-    container_name: sopdet-dev
+    container_name: wepwawet-dev
     ports:
       - "8080:80"
     volumes:
-      - .:/var/www/html/custom_apps/sopdet
+      - .:/var/www/html/custom_apps/wepwawet
       - nextcloud_data:/var/www/html
     environment:
       - SQLITE_DATABASE=nextcloud

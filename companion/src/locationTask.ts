@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { sendPosition, sendGuestPosition } from './api';
 import { type AppConfig, normalizeConfig } from './config';
 
-export const LOCATION_TASK = 'sopdet-background-location';
+export const LOCATION_TASK = 'wepwawet-background-location';
 
 interface LocationTaskData {
   locations: Location.LocationObject[];
@@ -19,7 +19,7 @@ TaskManager.defineTask(
     error,
   }: TaskManager.TaskManagerTaskBody<LocationTaskData>) => {
     if (error) {
-      console.error('[Sopdet] Location task error:', error.message);
+      console.error('[Wepwawet] Location task error:', error.message);
       return;
     }
     const { locations } = data;
@@ -28,7 +28,7 @@ TaskManager.defineTask(
     const loc = locations[locations.length - 1];
 
     try {
-      const raw = await SecureStore.getItemAsync('sopdet_config');
+      const raw = await SecureStore.getItemAsync('wepwawet_config');
       if (!raw) return;
       const config = normalizeConfig(JSON.parse(raw) as Omit<AppConfig, 'isValid'>);
       if (!config.isValid) return;
@@ -50,7 +50,7 @@ TaskManager.defineTask(
         );
       }
     } catch (e) {
-      console.error('[Sopdet] Failed to send position:', e);
+      console.error('[Wepwawet] Failed to send position:', e);
     }
   },
 );
@@ -64,7 +64,7 @@ export async function startSharing(): Promise<void> {
     activityType: Location.ActivityType.Other,
     showsBackgroundLocationIndicator: true, // iOS blue pill
     foregroundService: {
-      notificationTitle: 'Sopdet',
+      notificationTitle: 'Wepwawet',
       notificationBody: 'Sharing your location…',
       notificationColor: '#0082c9',
     },

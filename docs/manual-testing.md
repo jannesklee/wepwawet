@@ -6,7 +6,7 @@ Step-by-step environment setup and manual test workflow for both the web app and
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
-docker exec --user www-data sopdet-dev php occ app:enable sopdet
+docker exec --user www-data wepwawet-dev php occ app:enable wepwawet
 ```
 
 Access at http://localhost:8080 (admin / admin123).
@@ -23,11 +23,11 @@ npm run build   # one-off production build
 After changing `appinfo/routes.php` or adding a migration:
 
 ```bash
-docker exec --user www-data sopdet-dev php occ maintenance:repair
+docker exec --user www-data wepwawet-dev php occ maintenance:repair
 ```
 
 **Web app manual test checklist:**
-- Open http://localhost:8080/apps/sopdet — auto-creates a group on first visit, shows the map.
+- Open http://localhost:8080/apps/wepwawet — auto-creates a group on first visit, shows the map.
 - Tap "Share my location", confirm your own marker appears.
 - Copy the invite link, open it in a private/incognito window, join as a guest, confirm both markers show.
 - Create a timed share link, open it in another browser/private window, confirm the public viewer works and expires correctly.
@@ -71,7 +71,7 @@ cd companion && npx expo start
 
 adb reverse tcp:8081 tcp:8081
 adb shell am start -a android.intent.action.VIEW \
-  -d "exp+sopdet-companion://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+  -d "exp+wepwawet-companion://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
 ```
 
 `adb reverse` mappings don't survive an emulator restart or a long idle period — check with `adb reverse --list` if the app seems stuck. Without a live Metro server, the same command lands on the Dev Launcher error screen and looks identical to a broken tunnel — check `curl .../status` before assuming it's the reverse mapping.
@@ -85,9 +85,9 @@ Also: right after a fresh emulator boot, `am start` can transiently fail with `c
 The emulator reaches the host via the special address `10.0.2.2` (not `localhost`). Two pieces of one-time Nextcloud config are needed for the companion app to actually work against it — both are container state, so redo them after recreating the container:
 
 ```bash
-docker exec --user www-data sopdet-dev php occ config:system:set trusted_domains 2 --value="10.0.2.2"
-docker exec --user www-data sopdet-dev php occ config:system:set overwritehost --value="localhost:8080"
-docker exec --user www-data sopdet-dev php occ config:system:set overwriteprotocol --value="http"
+docker exec --user www-data wepwawet-dev php occ config:system:set trusted_domains 2 --value="10.0.2.2"
+docker exec --user www-data wepwawet-dev php occ config:system:set overwritehost --value="localhost:8080"
+docker exec --user www-data wepwawet-dev php occ config:system:set overwriteprotocol --value="http"
 ```
 
 The first makes Nextcloud accept requests via `10.0.2.2` at all; the other two force every generated absolute URL (share links, etc.) to say `localhost:8080` instead of whatever host the request came in on, so links created from the emulator are still openable from a browser on the host (see `dev-notes.md` #4 and #6).
@@ -101,12 +101,12 @@ The first makes Nextcloud accept requests via `10.0.2.2` at all; the other two f
    - App password: `admin123` (or a real app password)
 3. Save & start sharing. Group members list should populate; "Create share link" should work and the returned link should open fine in a host browser (per §3's `overwritehost` fix).
 
-Getting an instant, silent `[Sopdet] sendPosition error: TypeError: Network request failed` on every request (positions, sendPosition, create-share alike), with nothing useful in `adb logcat` beyond that JS-level message? Check the Server URL you saved — it's easy to type `localhost:8080` out of habit from testing the web app in a host browser, but from inside the emulator that resolves to the emulator's own loopback, where nothing listens. It must be `http://10.0.2.2:8080`. Fix by tapping the gear icon (top-right, in the header — not the floating Expo Tools bubble) → "Yes, reconfigure" → re-enter with `10.0.2.2`.
+Getting an instant, silent `[Wepwawet] sendPosition error: TypeError: Network request failed` on every request (positions, sendPosition, create-share alike), with nothing useful in `adb logcat` beyond that JS-level message? Check the Server URL you saved — it's easy to type `localhost:8080` out of habit from testing the web app in a host browser, but from inside the emulator that resolves to the emulator's own loopback, where nothing listens. It must be `http://10.0.2.2:8080`. Fix by tapping the gear icon (top-right, in the header — not the floating Expo Tools bubble) → "Yes, reconfigure" → re-enter with `10.0.2.2`.
 
 To get a real invite token/URL for guest testing (§5) or to double check group state:
 
 ```bash
-curl -sS -u admin:admin123 http://localhost:8080/apps/sopdet/api/groups -H "OCS-APIRequest: true"
+curl -sS -u admin:admin123 http://localhost:8080/apps/wepwawet/api/groups -H "OCS-APIRequest: true"
 ```
 
 ## 5. Test the companion app — guest / invite-link mode
@@ -116,19 +116,19 @@ Guest mode supports joining multiple groups at once (`config.guestLinks` array i
 1. Get the group token from the `api/groups` call above (or from the "Invite link" the web app shows).
 2. If the app isn't already in guest mode, reset it to the setup screen first. The in-app gear icon overlaps the Expo dev client's floating "Tools" bubble and taps land on the wrong one — instead of fighting that overlap, just clear the app's stored config directly:
    ```bash
-   adb shell pm clear com.sopdet.companion
+   adb shell pm clear com.wepwawet.companion
    ```
    (this also resets granted permissions — you'll need to re-grant location access, see §6)
    Relaunch (see §2's reconnect snippet) and pick the "Invite link" tab.
    If the app is *already* in guest mode, skip this — just use the "Paste invite link to join" row on the home screen's Groups card to add another group without resetting anything.
 3. Fill in:
-   - Invite URL: `http://10.0.2.2:8080/apps/sopdet/join/{token}` — use `10.0.2.2`, not whatever host the real invite link shows, since that's what's reachable from inside the emulator.
+   - Invite URL: `http://10.0.2.2:8080/apps/wepwawet/join/{token}` — use `10.0.2.2`, not whatever host the real invite link shows, since that's what's reachable from inside the emulator.
    - Your name in this group: anything (e.g. `TestGuest`)
    - Share for: any duration
 4. Save & start sharing (first-time setup) or tap "+ Join group" (adding another group). Each joined group gets its own on/off switch on the home screen.
 5. Verify from the host:
    ```bash
-   curl -sS -u admin:admin123 http://localhost:8080/apps/sopdet/group/1/positions -H "OCS-APIRequest: true"
+   curl -sS -u admin:admin123 http://localhost:8080/apps/wepwawet/group/1/positions -H "OCS-APIRequest: true"
    ```
    Should show a `"type":"guest"` entry with a fresh `updatedAt`. Toggling sharing off in the app should make that entry disappear from the response (`stop=1` flow).
 
@@ -144,12 +144,12 @@ Guest mode supports joining multiple groups at once (`config.guestLinks` array i
 4. Send the app to background (`adb shell input keyevent KEYCODE_HOME`) and confirm updates keep arriving — poll the positions endpoint (§5 step 5) and check `updatedAt` keeps advancing.
 5. To inspect the location task itself (it runs in a separate OS process, `LocationTaskService`) for crashes:
    ```bash
-   adb logcat -d | grep -iE "Sopdet|LocationTaskService|FATAL"
+   adb logcat -d | grep -iE "Wepwawet|LocationTaskService|FATAL"
    ```
 
 ## 7. General debugging tools
 
 - Screenshot: `adb exec-out screencap -p > screen.png`
 - Inspect the UI tree for exact tap coordinates: `adb shell uiautomator dump /sdcard/dump.xml && adb shell cat /sdcard/dump.xml`
-- JS-side errors are logged via `console.error` in `companion/src/api.ts` and `src/locationTask.ts` — check with `adb logcat -d | grep "ReactNativeJS.*Sopdet"`.
+- JS-side errors are logged via `console.error` in `companion/src/api.ts` and `src/locationTask.ts` — check with `adb logcat -d | grep "ReactNativeJS.*Wepwawet"`.
 - If the whole machine feels slow while the emulator is running, check `vmstat 1 3` for I/O wait (`wa` column) before assuming it's CPU-bound — see `dev-notes.md` #1.

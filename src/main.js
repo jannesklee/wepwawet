@@ -6,8 +6,8 @@ import { registerServiceWorker } from './utils/registerSW.js'
 document.addEventListener('DOMContentLoaded', () => {
 	const app = createApp(App)
 	app.mixin({ methods: { t, n } })
-	app.mount('#sopdet-app')
+	app.mount('#wepwawet-app')
 
-	const swUrl = loadState('sopdet', 'sopdet-state').swUrl
+	const swUrl = loadState('wepwawet', 'wepwawet-state').swUrl
 	registerServiceWorker(swUrl)
 })

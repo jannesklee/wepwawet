@@ -1,10 +1,10 @@
 <?php
 
-namespace OCA\Sopdet\Controller;
+namespace OCA\Wepwawet\Controller;
 
-use OCA\Sopdet\Db\Share;
-use OCA\Sopdet\Db\ShareMapper;
-use OCA\Sopdet\Db\PositionMapper;
+use OCA\Wepwawet\Db\Share;
+use OCA\Wepwawet\Db\ShareMapper;
+use OCA\Wepwawet\Db\PositionMapper;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
@@ -114,7 +114,7 @@ class ShareController extends Controller {
 
 	private function formatShare(Share $share): array {
 		$viewUrl = rtrim($this->urlGenerator->getAbsoluteURL('/'), '/')
-			. $this->urlGenerator->linkToRoute('sopdet.page.view', ['token' => $share->getToken()]);
+			. $this->urlGenerator->linkToRoute('wepwawet.page.view', ['token' => $share->getToken()]);
 
 		return [
 			'id' => $share->getId(),

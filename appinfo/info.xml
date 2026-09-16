@@ -1,30 +1,30 @@
 <?xml version="1.0"?>
 <info>
-    <id>sopdet</id>
-    <name>Sopdet</name>
+    <id>wepwawet</id>
+    <name>Wepwawet</name>
     <summary>Live location sharing for family and friends</summary>
     <description>Share your live location with family and friends directly within Nextcloud. No third-party services, no apps to install — just send a link.</description>
     <version>0.1.0</version>
     <licence>AGPL-3.0-or-later</licence>
     <author>Jannes Klee</author>
-    <namespace>Sopdet</namespace>
+    <namespace>Wepwawet</namespace>
     <category>social</category>
-    <website>https://forgejo.jannesklee.de/jklee/Sopdet</website>
-    <bugs>https://forgejo.jannesklee.de/jklee/Sopdet/issues</bugs>
-    <repository>https://forgejo.jannesklee.de/jklee/Sopdet</repository>
-    <screenshot>https://forgejo.jannesklee.de/jklee/Sopdet/raw/branch/main/img/screenshot.png</screenshot>
-    <screenshot>https://forgejo.jannesklee.de/jklee/Sopdet/raw/branch/main/img/screenshot_share.png</screenshot>
+    <website>https://forgejo.jannesklee.de/jklee/wepwawet</website>
+    <bugs>https://forgejo.jannesklee.de/jklee/wepwawet/issues</bugs>
+    <repository>https://forgejo.jannesklee.de/jklee/wepwawet</repository>
+    <screenshot>https://forgejo.jannesklee.de/jklee/wepwawet/raw/branch/main/img/screenshot.png</screenshot>
+    <screenshot>https://forgejo.jannesklee.de/jklee/wepwawet/raw/branch/main/img/screenshot_share.png</screenshot>
     <dependencies>
         <nextcloud min-version="30" max-version="34"/>
     </dependencies>
     <background-jobs>
-        <job>OCA\Sopdet\BackgroundJob\CleanupExpiredGuests</job>
+        <job>OCA\Wepwawet\BackgroundJob\CleanupExpiredGuests</job>
     </background-jobs>
     <navigations>
         <navigation>
-            <id>sopdet</id>
-            <name>Sopdet</name>
-            <route>sopdet.page.index</route>
+            <id>wepwawet</id>
+            <name>Wepwawet</name>
+            <route>wepwawet.page.index</route>
             <icon>app.svg</icon>
             <order>5</order>
         </navigation>

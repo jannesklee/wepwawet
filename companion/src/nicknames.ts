@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const KEY = 'sopdet_group_nicknames';
+const KEY = 'wepwawet_group_nicknames';
 
 export type Nicknames = Record<number, string>;
 

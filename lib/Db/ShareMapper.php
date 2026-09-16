@@ -1,6 +1,6 @@
 <?php
 
-namespace OCA\Sopdet\Db;
+namespace OCA\Wepwawet\Db;
 
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\QBMapper;
@@ -13,7 +13,7 @@ use OCP\IDBConnection;
 class ShareMapper extends QBMapper {
 
 	public function __construct(IDBConnection $db) {
-		parent::__construct($db, 'sopdet_shares', Share::class);
+		parent::__construct($db, 'wepwawet_shares', Share::class);
 	}
 
 	/** @throws DoesNotExistException */

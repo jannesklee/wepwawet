@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Sopdet",
-    "slug": "sopdet-companion",
+    "name": "Wepwawet",
+    "slug": "wepwawet-companion",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,11 +11,11 @@
       "android"
     ],
     "ios": {
-      "bundleIdentifier": "com.sopdet.companion",
+      "bundleIdentifier": "com.wepwawet.companion",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Sopdet needs your location to share it with others.",
-        "NSLocationAlwaysUsageDescription": "Sopdet needs your location in the background to continuously share it.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Sopdet needs your location in the background to continuously share it.",
+        "NSLocationWhenInUseUsageDescription": "Wepwawet needs your location to share it with others.",
+        "NSLocationAlwaysUsageDescription": "Wepwawet needs your location in the background to continuously share it.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Wepwawet needs your location in the background to continuously share it.",
         "UIBackgroundModes": [
           "location",
           "fetch"
@@ -23,7 +23,7 @@
       }
     },
     "android": {
-      "package": "com.sopdet.companion",
+      "package": "com.wepwawet.companion",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
         "monochromeImage": "./assets/adaptive-icon-monochrome.png",
@@ -42,9 +42,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Sopdet needs your location in the background to continuously share it.",
-          "locationAlwaysPermission": "Sopdet needs your location in the background to continuously share it.",
-          "locationWhenInUsePermission": "Sopdet needs your location to share it with others.",
+          "locationAlwaysAndWhenInUsePermission": "Wepwawet needs your location in the background to continuously share it.",
+          "locationAlwaysPermission": "Wepwawet needs your location in the background to continuously share it.",
+          "locationWhenInUsePermission": "Wepwawet needs your location to share it with others.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true
         }

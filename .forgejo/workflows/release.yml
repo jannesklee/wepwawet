@@ -46,7 +46,7 @@ jobs:
 
       - name: Create release tarball
         run: |
-          APP_ID=sopdet
+          APP_ID=wepwawet
           VERSION=${{ steps.version.outputs.version }}
           ARCHIVE="${APP_ID}-${VERSION}.tar.gz"
 
@@ -77,7 +77,7 @@ jobs:
           RELEASE_ID=$(curl -sf -X POST \
             -H "Authorization: token ${FORGEJO_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "{\"tag_name\":\"${GITHUB_REF_NAME}\",\"name\":\"Sopdet ${GITHUB_REF_NAME}\",\"body\":\"See [CHANGELOG](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/raw/branch/main/CHANGELOG.md) for what's new.\"}" \
+            -d "{\"tag_name\":\"${GITHUB_REF_NAME}\",\"name\":\"Wepwawet ${GITHUB_REF_NAME}\",\"body\":\"See [CHANGELOG](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/raw/branch/main/CHANGELOG.md) for what's new.\"}" \
             "${API}/releases" | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
 
           curl -sf -X POST \
@@ -95,7 +95,7 @@ jobs:
       # - name: Publish to Nextcloud App Store
       #   uses: https://github.com/R0Wi/nextcloud-appstore-push-action@v1
       #   with:
-      #     app-name: sopdet
+      #     app-name: wepwawet
       #     apps-repo-token: ${{ secrets.APPSTORE_TOKEN }}
       #     download-url: "${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.ARCHIVE }}"
       #     signature: file://.sig
